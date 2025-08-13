@@ -1,19 +1,16 @@
 -- Script de inicialização PostgreSQL para Docker
--- Cria o schema SantaCasa e as tabelas necessárias
+-- Cria as tabelas no owner atual (fornecido pelo cliente)
 
--- Cria o schema SantaCasa
-CREATE SCHEMA IF NOT EXISTS "SantaCasa";
-
--- Cria o enum StatusConfirmacao
-CREATE TYPE IF NOT EXISTS "SantaCasa".statusconfirmacao AS ENUM (
+-- Cria o enum StatusConfirmacao no owner atual
+CREATE TYPE IF NOT EXISTS statusconfirmacao AS ENUM (
     'PENDENTE',
     'CONFIRMADO', 
     'CANCELADO',
     'SEM_RESPOSTA'
 );
 
--- Cria a tabela atendimentos
-CREATE TABLE IF NOT EXISTS "SantaCasa".atendimentos (
+-- Cria a tabela atendimentos no owner atual
+CREATE TABLE IF NOT EXISTS atendimentos (
     id SERIAL PRIMARY KEY,
     nome_paciente VARCHAR(100) NOT NULL,
     telefone VARCHAR(20) NOT NULL,
@@ -21,7 +18,7 @@ CREATE TABLE IF NOT EXISTS "SantaCasa".atendimentos (
     data_consulta TIMESTAMP WITH TIME ZONE NOT NULL,
     nome_medico VARCHAR(100),
     especialidade VARCHAR(100),
-    status_confirmacao "SantaCasa".statusconfirmacao DEFAULT 'PENDENTE',
+    status_confirmacao statusconfirmacao DEFAULT 'PENDENTE',
     
     -- Campos de controle para Botconversa
     subscriber_id INTEGER UNIQUE,
@@ -41,13 +38,13 @@ CREATE TABLE IF NOT EXISTS "SantaCasa".atendimentos (
 );
 
 -- Cria índices para melhor performance
-CREATE INDEX IF NOT EXISTS idx_atendimentos_subscriber_id ON "SantaCasa".atendimentos(subscriber_id);
-CREATE INDEX IF NOT EXISTS idx_atendimentos_status ON "SantaCasa".atendimentos(status_confirmacao);
-CREATE INDEX IF NOT EXISTS idx_atendimentos_data_consulta ON "SantaCasa".atendimentos(data_consulta);
-CREATE INDEX IF NOT EXISTS idx_atendimentos_telefone ON "SantaCasa".atendimentos(telefone);
+CREATE INDEX IF NOT EXISTS idx_atendimentos_subscriber_id ON atendimentos(subscriber_id);
+CREATE INDEX IF NOT EXISTS idx_atendimentos_status ON atendimentos(status_confirmacao);
+CREATE INDEX IF NOT EXISTS idx_atendimentos_data_consulta ON atendimentos(data_consulta);
+CREATE INDEX IF NOT EXISTS idx_atendimentos_telefone ON atendimentos(telefone);
 
 -- Insere dados de exemplo (opcional)
-INSERT INTO "SantaCasa".atendimentos (
+INSERT INTO atendimentos (
     nome_paciente, 
     telefone, 
     email, 
@@ -60,7 +57,6 @@ INSERT INTO "SantaCasa".atendimentos (
 ON CONFLICT DO NOTHING;
 
 -- Comentários para documentação
-COMMENT ON SCHEMA "SantaCasa" IS 'Schema para dados da Santa Casa de Belo Horizonte';
-COMMENT ON TABLE "SantaCasa".atendimentos IS 'Tabela de atendimentos médicos com controle de confirmação via WhatsApp';
-COMMENT ON COLUMN "SantaCasa".atendimentos.subscriber_id IS 'ID do subscriber no Botconversa';
-COMMENT ON COLUMN "SantaCasa".atendimentos.status_confirmacao IS 'Status da confirmação da consulta';
+COMMENT ON TABLE atendimentos IS 'Tabela de atendimentos médicos com controle de confirmação via WhatsApp';
+COMMENT ON COLUMN atendimentos.subscriber_id IS 'ID do subscriber no Botconversa';
+COMMENT ON COLUMN atendimentos.status_confirmacao IS 'Status da confirmação da consulta';

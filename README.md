@@ -154,6 +154,8 @@ HOSPITAL_CITY=Belo Horizonte
 HOSPITAL_STATE=MG
 ```
 
+**📝 NOTA**: As tabelas serão criadas no owner/usuário fornecido pelo cliente, sem criar schemas adicionais.
+
 ### **Comandos Docker Disponíveis:**
 
 ```bash

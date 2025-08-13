@@ -69,7 +69,6 @@ class Atendimento(Base):
     """
 
     __tablename__ = "atendimentos"
-    __table_args__ = {"schema": "SantaCasa"}
 
     id = Column(Integer, primary_key=True, index=True)
 

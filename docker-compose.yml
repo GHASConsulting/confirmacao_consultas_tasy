@@ -87,7 +87,7 @@ services:
   db-postgresql:
     image: postgres:15-alpine
     environment:
-      - POSTGRES_DB=${POSTGRESQL_DOCKER_DB:-santaCasa}
+      - POSTGRES_DB=${POSTGRESQL_DOCKER_DB:-confirmacao_consultas}
       - POSTGRES_USER=${POSTGRESQL_DOCKER_USER:-postgres}
       - POSTGRES_PASSWORD=${POSTGRESQL_DOCKER_PASSWORD:-1234}
     volumes:
