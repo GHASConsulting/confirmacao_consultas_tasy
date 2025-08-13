@@ -1,0 +1,30 @@
+[build-system]
+requires = ["setuptools>=45", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "hospital-cli"
+version = "1.0.0"
+description = "CLI para Sistema de Confirmação de Consultas"
+authors = [{name = "Hospital Team"}]
+readme = "README.md"
+requires-python = ">=3.8"
+dependencies = [
+    "click>=8.0.0",
+    "rich>=13.0.0",
+]
+
+[project.scripts]
+hospital-cli = "cli.cli:cli"
+
+[tool.setuptools.packages.find]
+where = ["."]
+include = ["cli*"]
+
+[tool.black]
+line-length = 120
+target-version = ['py38']
+
+[tool.isort]
+profile = "black"
+line_length = 120 

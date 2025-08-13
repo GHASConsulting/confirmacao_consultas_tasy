@@ -1,0 +1,327 @@
+"""
+Serviço para processar webhooks do Botconversa.
+
+Este serviço gerencia:
+- Recebimento de webhooks
+- Processamento de respostas dos pacientes
+- Validação de dados
+- Logging de eventos
+"""
+
+from datetime import datetime
+from typing import Any, Dict, Optional
+
+from loguru import logger
+from sqlalchemy.orm import Session
+
+from app.database.models import (
+    Atendimento,
+    Confirmacao,
+    Consulta,
+    Paciente,
+    StatusConfirmacao,
+)
+
+from .botconversa_service import BotconversaService
+
+
+class WebhookService:
+    """Serviço para processar webhooks do Botconversa"""
+
+    def __init__(self, db: Session):
+        self.db = db
+        self.botconversa_service = BotconversaService(db)
+
+    def processar_webhook(self, webhook_data: Dict[str, Any]) -> Dict[str, Any]:
+        """
+        Processa um webhook recebido do Botconversa.
+
+        Args:
+            webhook_data: Dados do webhook recebido
+
+        Returns:
+            Resultado do processamento
+        """
+        try:
+            # Extrai dados do webhook
+            webhook_type = webhook_data.get("type")
+
+            if webhook_type == "message":
+                return self._processar_mensagem(webhook_data)
+            elif webhook_type == "status":
+                return self._processar_status(webhook_data)
+            else:
+                logger.warning(f"Tipo de webhook não suportado: {webhook_type}")
+                return {"success": False, "error": "Tipo de webhook não suportado"}
+
+        except Exception as e:
+            logger.error(f"Erro ao processar webhook: {str(e)}")
+            return {"success": False, "error": str(e)}
+
+    def _processar_mensagem(self, webhook_data: Dict[str, Any]) -> Dict[str, Any]:
+        """
+        Processa uma mensagem recebida via webhook.
+
+        Args:
+            webhook_data: Dados da mensagem
+
+        Returns:
+            Resultado do processamento
+        """
+        try:
+            # Extrai dados da mensagem
+            contact = webhook_data.get("contact", {})
+            message = webhook_data.get("message", {})
+
+            if not contact or not message:
+                return {
+                    "success": False,
+                    "error": "Dados de contato ou mensagem ausentes",
+                }
+
+            # Extrai informações do contato
+            phone = contact.get("phone", "").replace("+", "")
+            full_name = contact.get("full_name", "")
+
+            # Extrai conteúdo da mensagem
+            content = message.get("content", "").strip()
+            message_id = message.get("id", "")
+            timestamp = message.get("timestamp", "")
+
+            if not phone or not content:
+                return {
+                    "success": False,
+                    "error": "Telefone ou conteúdo da mensagem ausentes",
+                }
+
+            logger.info(f"Processando mensagem de {phone}: {content}")
+
+            # Processa a resposta do paciente
+            success = self.botconversa_service.processar_resposta_paciente(
+                phone, content
+            )
+
+            if success:
+                return {
+                    "success": True,
+                    "message": "Resposta processada com sucesso",
+                    "phone": phone,
+                    "content": content,
+                    "message_id": message_id,
+                }
+            else:
+                return {
+                    "success": False,
+                    "error": "Erro ao processar resposta do paciente",
+                }
+
+        except Exception as e:
+            logger.error(f"Erro ao processar mensagem: {str(e)}")
+            return {"success": False, "error": str(e)}
+
+    def _processar_status(self, webhook_data: Dict[str, Any]) -> Dict[str, Any]:
+        """
+        Processa um status recebido via webhook.
+
+        Args:
+            webhook_data: Dados do status
+
+        Returns:
+            Resultado do processamento
+        """
+        try:
+            # Extrai dados do status
+            status = webhook_data.get("status", "")
+            contact = webhook_data.get("contact", {})
+
+            if not status or not contact:
+                return {
+                    "success": False,
+                    "error": "Dados de status ou contato ausentes",
+                }
+
+            phone = contact.get("phone", "").replace("+", "")
+
+            logger.info(f"Processando status {status} para {phone}")
+
+            # Por enquanto, apenas loga o status
+            # Pode ser expandido para processar diferentes tipos de status
+            return {
+                "success": True,
+                "message": "Status processado com sucesso",
+                "status": status,
+                "phone": phone,
+            }
+
+        except Exception as e:
+            logger.error(f"Erro ao processar status: {str(e)}")
+            return {"success": False, "error": str(e)}
+
+    def validar_webhook(self, webhook_data: Dict[str, Any]) -> bool:
+        """
+        Valida os dados do webhook.
+
+        Args:
+            webhook_data: Dados do webhook
+
+        Returns:
+            True se válido, False caso contrário
+        """
+        try:
+            # Verifica se tem os campos obrigatórios
+            if "type" not in webhook_data:
+                logger.error("Webhook sem tipo")
+                return False
+
+            webhook_type = webhook_data.get("type")
+
+            if webhook_type == "message":
+                # Valida dados da mensagem
+                contact = webhook_data.get("contact", {})
+                message = webhook_data.get("message", {})
+
+                if not contact or not message:
+                    logger.error("Webhook de mensagem sem dados de contato ou mensagem")
+                    return False
+
+                phone = contact.get("phone")
+                content = message.get("content")
+
+                if not phone or not content:
+                    logger.error("Webhook de mensagem sem telefone ou conteúdo")
+                    return False
+
+            elif webhook_type == "status":
+                # Valida dados do status
+                status = webhook_data.get("status")
+                contact = webhook_data.get("contact", {})
+
+                if not status or not contact:
+                    logger.error("Webhook de status sem dados de status ou contato")
+                    return False
+
+            else:
+                logger.warning(f"Tipo de webhook não suportado: {webhook_type}")
+                return False
+
+            return True
+
+        except Exception as e:
+            logger.error(f"Erro ao validar webhook: {str(e)}")
+            return False
+
+    def registrar_webhook(
+        self, webhook_data: Dict[str, Any], resultado: Dict[str, Any]
+    ) -> None:
+        """
+        Registra o processamento do webhook no log.
+
+        Args:
+            webhook_data: Dados originais do webhook
+            resultado: Resultado do processamento
+        """
+        try:
+            # Extrai informações para log
+            webhook_type = webhook_data.get("type", "unknown")
+            contact = webhook_data.get("contact", {})
+            phone = contact.get("phone", "unknown") if contact else "unknown"
+
+            # Log do processamento
+            if resultado.get("success"):
+                logger.info(
+                    f"Webhook {webhook_type} processado com sucesso para {phone}"
+                )
+            else:
+                logger.error(
+                    f"Erro ao processar webhook {webhook_type} para {phone}: {resultado.get('error')}"
+                )
+
+        except Exception as e:
+            logger.error(f"Erro ao registrar webhook: {str(e)}")
+
+    def processar_n8n_webhook(self, n8n_data: Dict[str, Any]) -> Dict[str, Any]:
+        """
+        Processa dados recebidos do N8N com respostas dos pacientes.
+
+        Args:
+            n8n_data: Dados do N8N com telefone, subscriber_id e resposta
+
+        Returns:
+            Resultado do processamento
+        """
+        try:
+            # Extrai dados do N8N
+            telefone = n8n_data.get("telefone")
+            subscriber_id = n8n_data.get("subscriber_id")
+            resposta = n8n_data.get("resposta")
+            nome_paciente = n8n_data.get("nome_paciente")
+
+            if not telefone or not subscriber_id or not resposta:
+                return {
+                    "success": False,
+                    "error": "Telefone, subscriber_id ou resposta ausentes",
+                }
+
+            logger.info(
+                f"Processando resposta N8N: {telefone} - {subscriber_id} - {resposta}"
+            )
+
+            # Busca atendimento por subscriber_id
+            atendimento = (
+                self.db.query(Atendimento)
+                .filter(Atendimento.subscriber_id == subscriber_id)
+                .first()
+            )
+
+            if not atendimento:
+                logger.warning(
+                    f"Atendimento não encontrado para subscriber_id: {subscriber_id}"
+                )
+                return {
+                    "success": False,
+                    "error": f"Atendimento não encontrado para subscriber_id: {subscriber_id}",
+                }
+
+            # Processa a resposta
+            if resposta == "1":
+                # Confirmação
+                atendimento.status_confirmacao = StatusConfirmacao.CONFIRMADO
+                mensagem_status = "CONFIRMADO"
+            elif resposta == "0":
+                # Cancelamento
+                atendimento.status_confirmacao = StatusConfirmacao.CANCELADO
+                mensagem_status = "CANCELADO"
+            else:
+                logger.warning(f"Resposta inválida: {resposta}")
+                return {
+                    "success": False,
+                    "error": f"Resposta inválida: {resposta}. Esperado '1' ou '0'",
+                }
+
+            # Atualiza campos de controle
+            atendimento.respondido_em = datetime.now()
+            atendimento.resposta_paciente = resposta
+            atendimento.atualizado_em = datetime.now()
+
+            # Salva no banco
+            self.db.commit()
+
+            logger.info(
+                f"Atendimento {atendimento.id} atualizado para {mensagem_status}"
+            )
+
+            return {
+                "success": True,
+                "message": f"Atendimento {mensagem_status} com sucesso",
+                "atendimento_id": atendimento.id,
+                "status": mensagem_status,
+                "telefone": telefone,
+                "subscriber_id": subscriber_id,
+                "resposta": resposta,
+            }
+
+        except Exception as e:
+            logger.error(f"Erro ao processar webhook N8N: {str(e)}")
+            # Rollback em caso de erro
+            self.db.rollback()
+            return {"success": False, "error": str(e)}
