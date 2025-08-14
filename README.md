@@ -518,14 +518,17 @@ curl http://localhost:8000/scheduler/status
    - Verifique `DATABASE_TYPE` e URLs no `.env`
    - Confirme se o banco Docker está rodando
    - Use `make status` para verificar serviços
+
 2. **Erro Botconversa:**
 
    - Valide `BOTCONVERSA_API_KEY` no `.env`
    - Teste com `python -m cli test-botconversa`
+
 3. **Scheduler não funciona:**
 
    - Verifique `make scheduler-status`
    - Confirme horários no `.env`
+
 4. **Erro Docker:**
 
    - Use `make clean` para limpar tudo
