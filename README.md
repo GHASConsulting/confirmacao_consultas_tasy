@@ -21,119 +21,52 @@ Sistema automatizado para confirmação de consultas médicas via WhatsApp, inte
 - **Containerização**: Docker + Docker Compose
 - **Integração**: Botconversa API + N8N
 
-## 🚀 **Primeiros Passos (5 minutos)**
+---
 
-### **Para testar rapidamente em uma nova máquina:**
+## 🐳 **INSTALAÇÃO COM DOCKER (RECOMENDADA)**
+
+### **📋 PRÉ-REQUISITOS**
+
+- ✅ Docker instalado e rodando
+- ✅ Docker Compose disponível
+- ✅ Git instalado
+- ✅ Conta Botconversa com API Key
+
+### **🔍 VERIFICAR DOCKER**
 
 ```bash
-# 1. Clone o repositório
-git clone <seu-repositorio>
-cd confirmacao_consultas
-
-# 2. Execute a instalação automática
-./install.sh          # Linux/Mac
-# ou
-install.bat           # Windows
-
-# 3. Configure o .env com suas chaves Botconversa
-# 4. Acesse: http://localhost:8000
+# Verifique se Docker está funcionando
+docker --version
+docker-compose --version
+docker ps
 ```
-
-**🎯 Resultado**: Sistema completo rodando com PostgreSQL em menos de 5 minutos!
 
 ---
 
-## 📋 **Pré-requisitos**
+## 🚀 **PASSO A PASSO COMPLETO**
 
-- Python 3.11+ (para instalação local)
-- Docker e Docker Compose (para instalação Docker)
-- Conta Botconversa com API Key
-- Git
-
-## 🚀 **INSTALAÇÃO AUTOMÁTICA (RECOMENDADA)**
-
-### **🐧 Linux/Mac:**
+### **1️⃣ CLONAR O REPOSITÓRIO**
 
 ```bash
-# 1. Clone o repositório
 git clone <seu-repositorio>
 cd confirmacao_consultas
-
-# 2. Torne executável e execute
-chmod +x install.sh
-./install.sh
 ```
 
-### **🪟 Windows:**
-
-```cmd
-# 1. Clone o repositório
-git clone <seu-repositorio>
-cd confirmacao_consultas
-
-# 2. Execute a instalação
-install.bat
-```
-
-### **⚡ Setup Rápido Docker (Linux/Mac):**
+### **2️⃣ CONFIGURAR VARIÁVEIS DE AMBIENTE**
 
 ```bash
-# Torne executável
-chmod +x setup-docker.sh
-
-# PostgreSQL (padrão)
-./setup-docker.sh
-
-# Oracle
-./setup-docker.sh oracle
-
-# Firebird
-./setup-docker.sh firebird
-```
-
-### **🎯 O que os scripts fazem automaticamente:**
-
-✅ Verificam se Docker está instalado e rodando  
-✅ Verificam se Docker Compose está disponível  
-✅ Verificam se Git está instalado  
-✅ Instalam Make se necessário  
-✅ Criam arquivo .env a partir do template  
-✅ Constróem imagens Docker  
-✅ Iniciam serviços com PostgreSQL  
-✅ Testam a instalação  
-✅ Mostram próximos passos
-
----
-
-## 🐳 **Docker (Configuração Manual)**
-
-### **Setup Rápido com Docker:**
-
-```bash
-# 1. Clone o repositório
-git clone <seu-repositorio>
-cd confirmacao_consultas
-
-# 2. Configure as variáveis de ambiente
+# Copie o template
 cp env.example .env
-# Edite o .env com suas configurações
 
-# 3. Inicie os serviços (escolha o banco)
-make postgresql-setup    # Para PostgreSQL
-make oracle-setup        # Para Oracle
-make firebird-setup      # Para Firebird
-
-# 4. Verifique o status
-make status
+# Edite o arquivo .env
+nano .env  # ou use seu editor preferido
 ```
 
-### **Configuração do .env para Docker:**
-
-**IMPORTANTE**: Configure estas variáveis no seu `.env`:
+**🔑 CONFIGURAÇÕES OBRIGATÓRIAS no .env:**
 
 ```bash
 # ========================================
-# ESCOLHA DO BANCO DOCKER
+# ESCOLHA DO BANCO DE DADOS
 # ========================================
 DOCKER_DATABASE_TYPE=postgresql  # oracle, postgresql, firebird
 
@@ -154,96 +87,222 @@ HOSPITAL_CITY=Belo Horizonte
 HOSPITAL_STATE=MG
 ```
 
-**📝 NOTA**: As tabelas serão criadas no owner/usuário fornecido pelo cliente, sem criar schemas adicionais.
+### **3️⃣ ESCOLHER E SUBIR O BANCO DE DADOS**
 
-### **Comandos Docker Disponíveis:**
+**🎯 OPÇÃO A: PostgreSQL (Recomendado para começar)**
 
 ```bash
-# Comandos principais
+make postgresql-setup
+```
+
+**🎯 OPÇÃO B: Oracle**
+
+```bash
+make oracle-setup
+```
+
+**🎯 OPÇÃO C: Firebird**
+
+```bash
+make firebird-setup
+```
+
+### **4️⃣ VERIFICAR SE ESTÁ FUNCIONANDO**
+
+```bash
+# Ver status dos serviços
+make status
+
+# Ver logs em tempo real
+make logs
+
+# Verificar saúde da aplicação
+make health
+```
+
+### **5️⃣ TESTAR A APLICAÇÃO**
+
+```bash
+# Testar CLI
+make cli
+
+# Ou testar diretamente
+python -m cli test-db
+python -m cli test-botconversa
+```
+
+---
+
+## 📚 **COMANDOS DOCKER DISPONÍVEIS**
+
+### **🚀 COMANDOS PRINCIPAIS**
+
+```bash
 make help                    # Mostra todos os comandos disponíveis
 make build                   # Constrói as imagens Docker
-make up                      # Inicia serviços (usa banco do .env)
-make down                    # Para serviços
-make logs                    # Mostra logs
-make status                  # Status dos serviços
+make up                      # Inicia todos os serviços
+make down                    # Para todos os serviços
+make logs                    # Mostra logs em tempo real
+make status                  # Status de todos os serviços
+```
 
-# Setup específico por banco
+### **🗄️ SETUP ESPECÍFICO POR BANCO**
+
+```bash
 make postgresql-setup        # Inicia com PostgreSQL
 make oracle-setup            # Inicia com Oracle
 make firebird-setup          # Inicia com Firebird
 make dev                     # Setup padrão (PostgreSQL)
+```
 
-# Banco de dados
-make db-shell-postgresql     # Shell PostgreSQL
-make db-shell-oracle         # Shell Oracle
-make db-shell-firebird       # Shell Firebird
+### **💾 BANCO DE DADOS**
+
+```bash
+make db-shell-postgresql     # Acessa shell PostgreSQL
+make db-shell-oracle         # Acessa shell Oracle
+make db-shell-firebird       # Acessa shell Firebird
 make db-reset                # Reseta banco de dados
+```
 
-# Desenvolvimento
+### **🔧 DESENVOLVIMENTO**
+
+```bash
 make shell                   # Acessa shell do container
 make cli                     # Executa CLI da aplicação
-make test                    # Executa testes
+make test                    # Executa testes automatizados
+```
 
-# Monitoramento
+### **📊 MONITORAMENTO**
+
+```bash
 make health                  # Verifica saúde da aplicação
-make scheduler-status        # Status do scheduler
+make scheduler-status        # Status detalhado do scheduler
+```
 
-# Limpeza
+### **🧹 LIMPEZA E MANUTENÇÃO**
+
+```bash
 make clean                   # Limpa tudo (containers, volumes, imagens)
 make restart                 # Reinicia todos os serviços
 ```
 
-### **Como Escolher o Banco:**
+---
 
-1. **PostgreSQL (Recomendado para desenvolvimento):**
+## 🌐 **ACESSO À APLICAÇÃO**
 
-   ```bash
-   DOCKER_DATABASE_TYPE=postgresql
-   make postgresql-setup
-   ```
+### **📱 URLs de Acesso**
 
-2. **Oracle:**
+- **Aplicação**: http://localhost:8000
+- **Health Check**: http://localhost:8000/health
+- **Scheduler Status**: http://localhost:8000/scheduler/status
 
-   ```bash
-   DOCKER_DATABASE_TYPE=oracle
-   make oracle-setup
-   ```
-
-3. **Firebird:**
-   ```bash
-   DOCKER_DATABASE_TYPE=firebird
-   make firebird-setup
-   ```
-
-### **Troubleshooting Docker:**
-
-**Erro de porta em uso:**
+### **🔍 Verificar se está rodando**
 
 ```bash
-# Verifique portas em uso
+# Ver status geral
+make status
+
+# Ver logs da aplicação
+make logs app
+
+# Ver logs do banco
+make logs db-postgresql  # ou db-oracle, db-firebird
+```
+
+---
+
+## ❌ **TROUBLESHOOTING COMUM**
+
+### **🚫 Erro: Porta já em uso**
+
+```bash
+# Verificar portas em uso
 netstat -tulpn | grep :8000
 netstat -tulpn | grep :5432
 
-# Pare serviços conflitantes ou mude portas no .env
+# Solução: Mude portas no .env
 APP_PORT=8001
 POSTGRESQL_DOCKER_PORT=5433
 ```
 
-**Erro de permissão Docker:**
+### **🚫 Erro: Docker não tem permissão**
 
 ```bash
-# Adicione usuário ao grupo docker
+# Adicionar usuário ao grupo docker
 sudo usermod -aG docker $USER
 # Faça logout e login novamente
 ```
 
-**Limpar tudo e recomeçar:**
+### **🚫 Erro: Container não inicia**
 
 ```bash
+# Limpar tudo e recomeçar
 make clean                   # Remove tudo
-make build                   # Reconstrói
+make build                   # Reconstrói imagens
 make postgresql-setup        # Inicia novamente
 ```
+
+### **🚫 Erro: Banco não conecta**
+
+```bash
+# Verificar status dos serviços
+make status
+
+# Ver logs do banco
+make logs db-postgresql
+
+# Reiniciar apenas o banco
+make restart db-postgresql
+```
+
+---
+
+## 🎯 **EXEMPLO COMPLETO DE INSTALAÇÃO**
+
+```bash
+# 1. Clone o repositório
+git clone <seu-repositorio>
+cd confirmacao_consultas
+
+# 2. Configure o .env
+cp env.example .env
+nano .env  # Configure suas chaves Botconversa
+
+# 3. Suba com PostgreSQL
+make postgresql-setup
+
+# 4. Verifique status
+make status
+
+# 5. Teste a aplicação
+make cli
+python -m cli test-db
+python -m cli test-botconversa
+
+# 6. Acesse no navegador
+# http://localhost:8000
+```
+
+---
+
+## 🚀 **INSTALAÇÃO AUTOMÁTICA (ALTERNATIVA)**
+
+Se preferir instalação automática:
+
+### **🐧 Linux/Mac:**
+
+```bash
+chmod +x install.sh
+./install.sh
+```
+
+### **🪟 Windows:**
+
+```cmd
+install.bat
+```
+
+---
 
 ## 🔧 **Instalação Local (Sem Docker)**
 
@@ -459,18 +518,16 @@ curl http://localhost:8000/scheduler/status
    - Verifique `DATABASE_TYPE` e URLs no `.env`
    - Confirme se o banco Docker está rodando
    - Use `make status` para verificar serviços
-
 2. **Erro Botconversa:**
 
    - Valide `BOTCONVERSA_API_KEY` no `.env`
    - Teste com `python -m cli test-botconversa`
-
 3. **Scheduler não funciona:**
 
    - Verifique `make scheduler-status`
    - Confirme horários no `.env`
-
 4. **Erro Docker:**
+
    - Use `make clean` para limpar tudo
    - Verifique portas disponíveis
    - Confirme `DOCKER_DATABASE_TYPE` no `.env`
@@ -487,19 +544,3 @@ make shell
 # Verifique status dos serviços
 make status
 ```
-
-## 🤝 **Contribuição**
-
-1. Fork o projeto
-2. Crie uma branch para sua feature
-3. Commit suas mudanças
-4. Push para a branch
-5. Abra um Pull Request
-
-## 📄 **Licença**
-
-Este projeto está sob a licença MIT. Veja o arquivo `LICENSE` para detalhes.
-
----
-
-**Desenvolvido para Santa Casa de Belo Horizonte** 🏥
