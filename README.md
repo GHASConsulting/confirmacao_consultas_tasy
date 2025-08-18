@@ -547,3 +547,8 @@ make shell
 # Verifique status dos serviços
 make status
 ```
+<<<<<<< HEAD
+=======
+
+
+>>>>>>> 7c32791d23d806347842836c4e2df5312dc9793b
