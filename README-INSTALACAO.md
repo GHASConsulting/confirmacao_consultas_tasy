@@ -267,7 +267,7 @@ make shell
 python -m cli test-db
 
 # Testar Botconversa
-python -m cli test-botconversa
+python -m cli test-conexao
 ```
 
 ## 🚨 **Troubleshooting**

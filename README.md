@@ -337,7 +337,10 @@ python -m app.database.init_db
 python -m app.main
 
 # Em outro terminal, execute o CLI
-python -m cli
+python -m cli help                    # Ver ajuda completa
+python -m cli status                  # Ver status do sistema
+python -m cli test-db                 # Testar banco de dados
+python -m cli test-conexao            # Testar Botconversa
 ```
 
 ## 📱 **Usando o CLI**
@@ -347,21 +350,24 @@ O CLI oferece comandos para todas as operações principais:
 ```bash
 # Testes de conexão
 python -m cli test-db          # Testa conexão com banco
-python -m cli test-botconversa # Testa API Botconversa
+python -m cli test-conexao     # Testa API Botconversa
 
 # Gestão de atendimentos
-python -m cli criar-atendimento    # Cria novo atendimento
-python -m cli listar-atendimentos  # Lista todos os atendimentos
-python -m cli buscar-atendimento   # Busca atendimento específico
+python -m cli atendimentos              # Lista todos os atendimentos
+python -m cli listar-atendimentos       # Lista atendimentos pendentes
+python -m cli buscar-atendimento        # Busca atendimento por telefone
+python -m cli criar-atendimento         # Cria novo atendimento
 
 # Operações Botconversa
-python -m cli adicionar-botconversa    # Adiciona subscriber
-python -m cli enviar-mensagem          # Envia mensagem
-python -m cli enviar-fluxo             # Envia fluxo interativo
-python -m cli executar-workflow        # Executa workflow completo
+python -m cli adicionar-botconversa     # Adiciona subscriber no Botconversa
+python -m cli enviar-mensagem           # Envia mensagem personalizada
+python -m cli executar-workflow         # Executa workflow completo
+python -m cli processar-resposta        # Processa resposta do paciente
+python -m cli adicionar-campanha        # Adiciona na campanha
 
 # Status e monitoramento
-python -m cli status                   # Status geral do sistema
+python -m cli status                    # Status geral do sistema
+python -m cli help                      # Ajuda detalhada
 ```
 
 ## 🔗 **Webhook e N8N**
@@ -493,7 +499,7 @@ pytest
 ```bash
 # Teste CLI
 python -m cli test-db
-python -m cli test-botconversa
+python -m cli test-conexao
 
 # Teste API
 curl http://localhost:8000/health
@@ -522,7 +528,7 @@ curl http://localhost:8000/scheduler/status
 2. **Erro Botconversa:**
 
    - Valide `BOTCONVERSA_API_KEY` no `.env`
-   - Teste com `python -m cli test-botconversa`
+   - Teste com `python -m cli test-conexao`
 
 3. **Scheduler não funciona:**
 

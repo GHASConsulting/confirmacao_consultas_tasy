@@ -425,6 +425,8 @@ class AppointmentScheduler:
                 return False
 
             logger.info(f"Subscriber criado com ID: {subscriber_id}")
+            logger.info(f"🏷️ Etiqueta 'subscriber_id' adicionada automaticamente ao subscriber {subscriber_id}")
+            logger.info(f"📝 Campo personalizado 'subscriber_id' adicionado automaticamente ao subscriber {subscriber_id}")
 
             # PASSO 2: Adicionar à campanha "Confirmação de Consultas"
             logger.info(f"PASSO 2: Adicionando à campanha")

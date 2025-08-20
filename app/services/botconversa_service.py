@@ -105,7 +105,31 @@ class BotconversaService:
 
             if response.status_code == 200:
                 subscriber = response.json()
-                logger.info(f"Subscriber criado com sucesso: {subscriber.get('id')}")
+                subscriber_id = subscriber.get('id')
+                logger.info(f"Subscriber criado com sucesso: {subscriber_id}")
+                
+                # Adicionar etiqueta subscriber_id automaticamente
+                if subscriber_id:
+                    logger.info(f"Adicionando etiqueta subscriber_id ao subscriber {subscriber_id}")
+                    sucesso_etiqueta = self.adicionar_etiqueta_subscriber(subscriber_id)
+                    
+                    if sucesso_etiqueta:
+                        logger.info(f"✅ Etiqueta subscriber_id adicionada com sucesso ao subscriber {subscriber_id}")
+                    else:
+                        logger.warning(f"⚠️ Subscriber criado, mas falha ao adicionar etiqueta para {subscriber_id}")
+                    
+                    # Adicionar campo personalizado subscriber_id automaticamente
+                    logger.info(f"Adicionando campo personalizado subscriber_id ao subscriber {subscriber_id}")
+                    sucesso_campo = self.adicionar_campo_personalizado(subscriber_id)
+                    
+                    if sucesso_campo:
+                        logger.info(f"✅ Campo personalizado subscriber_id adicionado com sucesso ao subscriber {subscriber_id}")
+                    else:
+                        logger.warning(f"⚠️ Subscriber criado, mas falha ao adicionar campo personalizado para {subscriber_id}")
+                        # Continua mesmo se o campo falhar - não quebra o fluxo
+                else:
+                    logger.warning("Subscriber criado mas sem ID válido para adicionar etiqueta e campo personalizado")
+                
                 return subscriber
             else:
                 logger.error(
@@ -149,6 +173,95 @@ class BotconversaService:
         except Exception as e:
             logger.error(f"Erro ao buscar subscriber: {str(e)}")
             return None
+
+    def adicionar_etiqueta_subscriber(self, subscriber_id: int, tag_id: int = 15362464) -> bool:
+        """
+        Adiciona etiqueta subscriber_id ao subscriber no Botconversa.
+
+        Args:
+            subscriber_id: ID do subscriber no Botconversa
+            tag_id: ID da etiqueta (padrão: 15362464 para subscriber_id)
+
+        Returns:
+            True se etiqueta foi adicionada com sucesso, False caso contrário
+        """
+        try:
+            logger.info(f"Adicionando etiqueta {tag_id} ao subscriber {subscriber_id}")
+            
+            # URL para adicionar etiqueta ao subscriber
+            url = f"{self.base_url}/subscriber/{subscriber_id}/tags/{tag_id}/"
+            
+            # Faz requisição POST para adicionar etiqueta
+            response = requests.post(
+                url,
+                headers=self.headers,
+                timeout=30,
+            )
+            
+            if response.status_code == 200 or response.status_code == 201:
+                logger.info(f"✅ Etiqueta {tag_id} adicionada com sucesso ao subscriber {subscriber_id}")
+                return True
+            else:
+                logger.error(
+                    f"❌ Erro ao adicionar etiqueta {tag_id} ao subscriber {subscriber_id}: "
+                    f"{response.status_code} - {response.text}"
+                )
+                return False
+                
+        except Exception as e:
+            logger.error(f"❌ Erro ao adicionar etiqueta ao subscriber {subscriber_id}: {str(e)}")
+            return False
+
+    def adicionar_campo_personalizado(
+        self, subscriber_id: int, field_id: int = 4336343, valor: str = None
+    ) -> bool:
+        """
+        Adiciona valor ao campo personalizado subscriber_id do subscriber no Botconversa.
+
+        Args:
+            subscriber_id: ID do subscriber no Botconversa
+            field_id: ID do campo personalizado (padrão: 4336343 para subscriber_id)
+            valor: Valor a ser salvo no campo (se None, usa o próprio subscriber_id)
+
+        Returns:
+            True se campo foi atualizado com sucesso, False caso contrário
+        """
+        try:
+            # Se não foi informado valor, usa o próprio subscriber_id
+            if valor is None:
+                valor = str(subscriber_id)
+            
+            logger.info(f"Adicionando valor '{valor}' ao campo personalizado {field_id} do subscriber {subscriber_id}")
+            
+            # URL para atualizar campo personalizado do subscriber
+            url = f"{self.base_url}/subscriber/{subscriber_id}/custom_fields/{field_id}/"
+            
+            # Dados para atualizar o campo personalizado
+            field_data = {
+                "value": valor
+            }
+            
+            # Faz requisição POST para atualizar campo personalizado
+            response = requests.post(
+                url,
+                json=field_data,
+                headers=self.headers,
+                timeout=30,
+            )
+            
+            if response.status_code == 200 or response.status_code == 201:
+                logger.info(f"✅ Campo personalizado {field_id} atualizado com sucesso para subscriber {subscriber_id} com valor '{valor}'")
+                return True
+            else:
+                logger.error(
+                    f"❌ Erro ao atualizar campo personalizado {field_id} do subscriber {subscriber_id}: "
+                    f"{response.status_code} - {response.text}"
+                )
+                return False
+                
+        except Exception as e:
+            logger.error(f"❌ Erro ao atualizar campo personalizado do subscriber {subscriber_id}: {str(e)}")
+            return False
 
     def criar_atendimento(self, dados: Dict[str, Any]) -> Optional[Atendimento]:
         """

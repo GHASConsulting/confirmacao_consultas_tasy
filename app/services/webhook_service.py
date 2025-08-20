@@ -283,14 +283,21 @@ class WebhookService:
                 }
 
             # Processa a resposta
+            logger.info(f"Processando resposta: {resposta}")
+            logger.info(f"Status atual do atendimento: {atendimento.status}")
+            
             if resposta == "1":
                 # Confirmação
-                atendimento.status_confirmacao = StatusConfirmacao.CONFIRMADO
+                logger.info("Definindo status como CONFIRMADO")
+                atendimento.status = StatusConfirmacao.CONFIRMADO
                 mensagem_status = "CONFIRMADO"
+                logger.info(f"Status definido: {atendimento.status}")
             elif resposta == "0":
                 # Cancelamento
-                atendimento.status_confirmacao = StatusConfirmacao.CANCELADO
+                logger.info("Definindo status como CANCELADO")
+                atendimento.status = StatusConfirmacao.CANCELADO
                 mensagem_status = "CANCELADO"
+                logger.info(f"Status definido: {atendimento.status}")
             else:
                 logger.warning(f"Resposta inválida: {resposta}")
                 return {
@@ -299,12 +306,29 @@ class WebhookService:
                 }
 
             # Atualiza campos de controle
+            logger.info("Atualizando campos de controle...")
             atendimento.respondido_em = datetime.now()
             atendimento.resposta_paciente = resposta
             atendimento.atualizado_em = datetime.now()
+            logger.info(f"Campos atualizados. Status final: {atendimento.status}")
 
             # Salva no banco
+            logger.info("Fazendo commit no banco...")
+            logger.info(f"Status antes do commit: {atendimento.status}")
+            logger.info(f"Status antes do commit (value): {atendimento.status.value if atendimento.status else 'None'}")
+            
+            # Força o flush para garantir que as mudanças sejam enviadas para o banco
+            self.db.flush()
+            logger.info("Flush realizado")
+            
+            # Faz o commit
             self.db.commit()
+            logger.info("Commit realizado com sucesso!")
+            
+            # Verifica se foi salvo
+            self.db.refresh(atendimento)
+            logger.info(f"Status após refresh: {atendimento.status}")
+            logger.info(f"Status após refresh (value): {atendimento.status.value if atendimento.status else 'None'}")
 
             logger.info(
                 f"Atendimento {atendimento.id} atualizado para {mensagem_status}"
@@ -322,6 +346,14 @@ class WebhookService:
 
         except Exception as e:
             logger.error(f"Erro ao processar webhook N8N: {str(e)}")
+            logger.error(f"Tipo do erro: {type(e).__name__}")
+            logger.error("Traceback completo:", exc_info=True)
+            
             # Rollback em caso de erro
-            self.db.rollback()
+            try:
+                self.db.rollback()
+                logger.info("Rollback realizado no WebhookService devido a erro")
+            except Exception as rollback_error:
+                logger.error(f"Erro no rollback do WebhookService: {str(rollback_error)}")
+            
             return {"success": False, "error": str(e)}

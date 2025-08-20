@@ -9,32 +9,32 @@ services:
     environment:
       # Banco de dados (configurável via .env)
       - DATABASE_TYPE=${DOCKER_DATABASE_TYPE:-postgresql}
-      
+
       # URLs dos bancos Docker
       - ORACLE_URL=oracle+cx_oracle://${ORACLE_DOCKER_USER:-system}:${ORACLE_DOCKER_PASSWORD:-oracle}@${ORACLE_DOCKER_HOST:-db-oracle}:${ORACLE_DOCKER_PORT:-1521}/${ORACLE_DOCKER_SERVICE:-XE}
       - POSTGRESQL_URL=postgresql://${POSTGRESQL_DOCKER_USER:-postgres}:${POSTGRESQL_DOCKER_PASSWORD:-1234}@${POSTGRESQL_DOCKER_HOST:-db-postgresql}:${POSTGRESQL_DOCKER_PORT:-5432}/${POSTGRESQL_DOCKER_DB:-santaCasa}
       - FIREBIRD_URL=firebird://${FIREBIRD_DOCKER_USER:-SYSDBA}:${FIREBIRD_DOCKER_PASSWORD:-masterkey}@${FIREBIRD_DOCKER_HOST:-db-firebird}:${FIREBIRD_DOCKER_PORT:-3050}/${FIREBIRD_DOCKER_DB:-hospital_db}
-      
+
       # URL genérica baseada na escolha
       - DATABASE_URL=${DATABASE_URL}
-      
+
       # Botconversa
       - BOTCONVERSA_API_URL=${BOTCONVERSA_API_URL}
       - BOTCONVERSA_API_KEY=${BOTCONVERSA_API_KEY}
       - BOTCONVERSA_WEBHOOK_SECRET=${BOTCONVERSA_WEBHOOK_SECRET}
-      
+
       # Hospital
       - HOSPITAL_NAME=${HOSPITAL_NAME}
       - HOSPITAL_PHONE=${HOSPITAL_PHONE}
       - HOSPITAL_ADDRESS=${HOSPITAL_ADDRESS}
       - HOSPITAL_CITY=${HOSPITAL_CITY}
       - HOSPITAL_STATE=${HOSPITAL_STATE}
-      
+
       # Webhook
       - WEBHOOK_HOST=0.0.0.0
       - WEBHOOK_PORT=8000
       - WEBHOOK_URL=${WEBHOOK_URL}
-      
+
       # Scheduler
       - SCHEDULER_CONFIRMATION_HOUR=${SCHEDULER_CONFIRMATION_HOUR}
       - SCHEDULER_CONFIRMATION_MINUTE=${SCHEDULER_CONFIRMATION_MINUTE}
@@ -42,7 +42,7 @@ services:
       - SCHEDULER_REMINDER_MINUTE=${SCHEDULER_REMINDER_MINUTE}
       - SCHEDULER_ENABLE_CONFIRMATION_JOB=${SCHEDULER_ENABLE_CONFIRMATION_JOB}
       - SCHEDULER_ENABLE_REMINDER_JOB=${SCHEDULER_ENABLE_REMINDER_JOB}
-      
+
       # Aplicação
       - DEBUG=${DEBUG}
       - LOG_LEVEL=${LOG_LEVEL}
@@ -51,12 +51,10 @@ services:
     volumes:
       - ./logs:/app/logs
     depends_on:
-      - db-oracle
       - db-postgresql
-      - db-firebird
     restart: unless-stopped
     healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
+      test: [ "CMD", "curl", "-f", "http://localhost:8000/health" ]
       interval: 30s
       timeout: 10s
       retries: 3
@@ -77,7 +75,7 @@ services:
     profiles:
       - oracle
     healthcheck:
-      test: ["CMD", "sqlplus", "-L", "${ORACLE_DOCKER_USER:-system}/${ORACLE_DOCKER_PASSWORD:-oracle}@//localhost:${ORACLE_DOCKER_PORT:-1521}/${ORACLE_DOCKER_SERVICE:-XE}", "-c", "SELECT 1 FROM DUAL"]
+      test: [ "CMD", "sqlplus", "-L", "${ORACLE_DOCKER_USER:-system}/${ORACLE_DOCKER_PASSWORD:-oracle}@//localhost:${ORACLE_DOCKER_PORT:-1521}/${ORACLE_DOCKER_SERVICE:-XE}", "-c", "SELECT 1 FROM DUAL" ]
       interval: 30s
       timeout: 10s
       retries: 5
@@ -99,7 +97,7 @@ services:
     profiles:
       - postgresql
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U ${POSTGRESQL_DOCKER_USER:-postgres}"]
+      test: [ "CMD-SHELL", "pg_isready -U ${POSTGRESQL_DOCKER_USER:-postgres}" ]
       interval: 10s
       timeout: 5s
       retries: 5
@@ -120,7 +118,7 @@ services:
     profiles:
       - firebird
     healthcheck:
-      test: ["CMD", "gds_db_info", "-user", "${FIREBIRD_DOCKER_USER:-SYSDBA}", "-password", "${FIREBIRD_DOCKER_PASSWORD:-masterkey}", "-database", "localhost:${FIREBIRD_DOCKER_PORT:-3050}/${FIREBIRD_DOCKER_DB:-hospital_db}"]
+      test: [ "CMD", "gds_db_info", "-user", "${FIREBIRD_DOCKER_USER:-SYSDBA}", "-password", "${FIREBIRD_DOCKER_PASSWORD:-masterkey}", "-database", "localhost:${FIREBIRD_DOCKER_PORT:-3050}/${FIREBIRD_DOCKER_DB:-hospital_db}" ]
       interval: 30s
       timeout: 10s
       retries: 5
