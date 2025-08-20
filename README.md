@@ -38,27 +38,70 @@ Sistema automatizado para confirmação de consultas médicas via WhatsApp, inte
 ### **🔍 VERIFICAR DOCKER**
 
 ```bash
-# Verifique se Docker está funcionando
-docker --version
-docker-compose --version
-docker ps
+# 1. Clone o repositório
+git clone <seu-repositorio>
+cd confirmacao_consultas
+
+# 2. Configure o .env com suas chaves Botconversa
+cp env.example .env
+# Edite o .env com suas configurações
+
+# 3. Inicie com Docker (PostgreSQL)
+make postgresql-setup
+
+# 4. Acesse: http://localhost:5001
 ```
+
+**🎯 Resultado**: Sistema completo rodando com PostgreSQL em menos de 5 minutos!
 
 ---
 
-## 🚀 **PASSO A PASSO COMPLETO**
+## 📋 **Pré-requisitos**
 
-### **1️⃣ CLONAR O REPOSITÓRIO**
+- Python 3.11+ (para instalação local)
+- Docker e Docker Compose (para instalação Docker)
+- Conta Botconversa com API Key
+- Git
+
+## 🚀 **INSTALAÇÃO AUTOMÁTICA (RECOMENDADA)**
+
+### **🐧 Linux/Mac/Windows:**
 
 ```bash
 git clone <seu-repositorio>
 cd confirmacao_consultas
+
+# 2. Configure o .env
+cp env.example .env
+# Edite o .env com suas configurações
+
+# 3. Inicie com Docker (escolha o banco)
+make postgresql-setup    # Para PostgreSQL (recomendado)
+make oracle-setup        # Para Oracle
+make firebird-setup      # Para Firebird
 ```
 
-### **2️⃣ CONFIGURAR VARIÁVEIS DE AMBIENTE**
+### **🎯 O que o comando make faz automaticamente:**
+
+✅ Verifica se Docker está instalado e rodando  
+✅ Verifica se Docker Compose está disponível  
+✅ Constrói imagens Docker  
+✅ Inicia serviços com o banco escolhido  
+✅ Testa a instalação  
+✅ Mostra próximos passos
+
+---
+
+## 🐳 **Docker (Configuração Manual)**
+
+### **Setup Rápido com Docker:**
 
 ```bash
-# Copie o template
+# 1. Clone o repositório
+git clone <seu-repositorio>
+cd confirmacao_consultas
+
+# 2. Configure as variáveis de ambiente
 cp env.example .env
 
 # Edite o arquivo .env
@@ -88,6 +131,11 @@ HOSPITAL_PHONE=(31) 3238-8100
 HOSPITAL_ADDRESS=Rua Domingos Vieira, 590 - Santa Efigênia
 HOSPITAL_CITY=Belo Horizonte
 HOSPITAL_STATE=MG
+
+# ========================================
+# CONFIGURAÇÕES DE PORTA
+# ========================================
+APP_PORT=5001
 ```
 
 ### **3️⃣ ESCOLHER E SUBIR O BANCO DE DADOS**
@@ -155,34 +203,18 @@ make status                  # Status de todos os serviços
 make postgresql-setup        # Inicia com PostgreSQL
 make oracle-setup            # Inicia com Oracle
 make firebird-setup          # Inicia com Firebird
-make dev                     # Setup padrão (PostgreSQL)
-```
 
-### **💾 BANCO DE DADOS**
-
-```bash
-make db-shell-postgresql     # Acessa shell PostgreSQL
-make db-shell-oracle         # Acessa shell Oracle
-make db-shell-firebird       # Acessa shell Firebird
-make db-reset                # Reseta banco de dados
-```
-
-### **🔧 DESENVOLVIMENTO**
+# Banco de dados
+make db-shell-postgresql     # Shell PostgreSQL
+make db-shell-oracle         # Shell Oracle
+make db-shell-firebird       # Shell Firebird
 
 ```bash
 make shell                   # Acessa shell do container
 make cli                     # Executa CLI da aplicação
-make test                    # Executa testes automatizados
-```
-
-### **📊 MONITORAMENTO**
 
 ```bash
 make health                  # Verifica saúde da aplicação
-make scheduler-status        # Status detalhado do scheduler
-```
-
-### **🧹 LIMPEZA E MANUTENÇÃO**
 
 ```bash
 make clean                   # Limpa tudo (containers, volumes, imagens)
@@ -219,12 +251,12 @@ make logs db-postgresql  # ou db-oracle, db-firebird
 ### **🚫 Erro: Porta já em uso**
 
 ```bash
-# Verificar portas em uso
-netstat -tulpn | grep :8000
+# Verifique portas em uso
+netstat -tulpn | grep :5001
 netstat -tulpn | grep :5432
 
-# Solução: Mude portas no .env
-APP_PORT=8001
+# Pare serviços conflitantes ou mude portas no .env
+APP_PORT=5001
 POSTGRESQL_DOCKER_PORT=5433
 ```
 
@@ -344,6 +376,8 @@ python -m cli help                    # Ver ajuda completa
 python -m cli status                  # Ver status do sistema
 python -m cli test-db                 # Testar banco de dados
 python -m cli test-conexao            # Testar Botconversa
+
+# Acesse: http://localhost:5001
 ```
 
 ## 📱 **Usando o CLI**
@@ -517,7 +551,7 @@ DEBUG=false
 
 # Configure host e porta
 WEBHOOK_HOST=0.0.0.0
-WEBHOOK_PORT=8000
+WEBHOOK_PORT=5001
 
 # Configure URL pública
 WEBHOOK_URL=https://seudominio.com/webhook/botconversa
@@ -563,10 +597,7 @@ confirmacao_consultas/
 ├── Makefile               # Automação de comandos
 ├── requirements.txt       # Dependências Python
 ├── .env                   # Variáveis de ambiente
-├── install.sh             # 🚀 Script de instalação Linux/Mac
-├── install.bat            # 🚀 Script de instalação Windows
-├── setup-docker.sh        # ⚡ Setup rápido Docker
-└── README-INSTALACAO.md   # 📖 Guia completo de instalação
+└── README.md              # 📖 Este arquivo
 ```
 
 ## 🔍 **Testes e Validação**
@@ -574,9 +605,6 @@ confirmacao_consultas/
 ### **Testes Automatizados:**
 
 ```bash
-# Com Docker
-make test
-
 # Local
 pytest
 ```
@@ -589,11 +617,11 @@ python -m cli test-db
 python -m cli test-conexao
 
 # Teste API
-curl http://localhost:8000/health
-curl http://localhost:8000/scheduler/status
+curl http://localhost:5001/health
+curl http://localhost:5001/scheduler/status
 
 # Teste Webhook
-curl -X POST http://localhost:8000/webhook/botconversa \
+curl -X POST http://localhost:5001/webhook/botconversa \
   -H "Content-Type: application/json" \
   -d '{"telefone": "5511999999999", "subscriber_id": "123", "resposta": "1"}'
 ```
@@ -605,7 +633,6 @@ curl -X POST http://localhost:8000/webhook/botconversa \
 - 🔄 [Fluxo Botconversa](docs/fluxo_botconversa_consultas.md)
 - 🌐 [Guia Webhook N8N](docs/webhook_n8n_guide.md)
 - ✅ [Implementações Completadas](IMPLEMENTACOES_COMPLETADAS.md)
-- 🚀 **[Guia de Instalação Completo](README-INSTALACAO.md)** ⭐ **NOVO!**
 
 ## 🆘 **Suporte e Troubleshooting**
 
@@ -624,7 +651,7 @@ curl -X POST http://localhost:8000/webhook/botconversa \
 
 3. **Scheduler não funciona:**
 
-   - Verifique `make scheduler-status`
+   - Verifique `make status`
    - Confirme horários no `.env`
 
 4. **Erro Docker:**
