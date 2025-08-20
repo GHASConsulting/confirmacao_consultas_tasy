@@ -4,7 +4,7 @@ Interface de linha de comando para gerenciar e testar o sistema de confirmação
 
 ## 📋 Comandos Disponíveis
 
-### 🆕 Novos Comandos (Implementados e Testados)
+### 🆕 Comandos Principais (Implementados e Testados)
 
 #### `criar-atendimento`
 
@@ -100,135 +100,158 @@ python -m cli adicionar-campanha --telefone 5531999629004
 
 #### `status`
 
-Mostra o status atual do sistema.
+Mostra o status geral do sistema.
+
+**Uso:**
+
+```bash
+python -m cli status
+```
 
 #### `test-db`
 
-Testa a conexão com o banco de dados configurado.
+Testa a conexão com o banco de dados.
 
-#### `conexao`
+**Uso:**
 
-Testa a conexão com a API do Botconversa.
+```bash
+python -m cli test-db
+```
 
-### 📊 Comandos de Atendimentos
+#### `test-conexao`
+
+Testa a conexão com a API Botconversa.
+
+**Uso:**
+
+```bash
+python -m cli test-conexao
+```
+
+### 📊 Comandos de Consulta
 
 #### `atendimentos`
 
-Lista todos os atendimentos pendentes.
-
-#### `buscar`
-
-Busca atendimento por telefone.
+Lista todos os atendimentos cadastrados.
 
 **Uso:**
 
 ```bash
-python -m cli buscar --telefone 5531999629004
+python -m cli atendimentos
 ```
 
-#### `mensagem`
+#### `listar-atendimentos`
 
-Envia mensagem para um paciente.
+Lista apenas os atendimentos pendentes de confirmação.
 
 **Uso:**
 
 ```bash
-python -m cli mensagem --telefone 5531999629004
+python -m cli listar-atendimentos
 ```
 
-#### `workflow`
+#### `buscar-atendimento`
 
-Executa o workflow completo para um atendimento.
+Busca um atendimento específico por telefone.
 
 **Uso:**
 
 ```bash
-python -m cli workflow --id 1
+python -m cli buscar-atendimento --telefone 5531999629004
 ```
 
-#### `resposta`
+### 🤖 Comandos Botconversa
+
+#### `enviar-mensagem`
+
+Envia uma mensagem personalizada para um paciente.
+
+**Uso:**
+
+```bash
+python -m cli enviar-mensagem --telefone 5531999629004
+```
+
+#### `executar-workflow`
+
+Executa o workflow completo de confirmação para um atendimento.
+
+**Uso:**
+
+```bash
+python -m cli executar-workflow --id 1
+```
+
+#### `processar-resposta`
 
 Processa a resposta de um paciente.
 
 **Uso:**
 
 ```bash
-python -m cli resposta --telefone 5531999629004 --resposta 1
+python -m cli processar-resposta --telefone 5531999629004 --resposta 1
 ```
 
-## 🎯 Exemplos de Uso Completos
+**Opções de resposta:**
+- `1`: SIM (confirma consulta)
+- `0`: NÃO (cancela consulta)
 
-### Fluxo Completo de Criação e Integração
+### 📚 Ajuda
 
-1. **Criar novo atendimento:**
+#### `help`
 
+Mostra ajuda detalhada sobre todos os comandos disponíveis.
+
+**Uso:**
+
+```bash
+python -m cli help
+```
+
+## 🎯 Fluxo de Trabalho Recomendado
+
+### **1. Criar Atendimento**
 ```bash
 python -m cli criar-atendimento --nome "João Silva" --telefone 5531999629004 --medico "Dr. Carlos" --especialidade "Cardiologia" --data "15/01/2025" --hora "14:00"
 ```
 
-2. **Adicionar paciente ao Botconversa:**
-
+### **2. Adicionar no Botconversa**
 ```bash
 python -m cli adicionar-botconversa --telefone 5531999629004
 ```
 
-3. **Adicionar paciente à campanha:**
-
+### **3. Executar Workflow**
 ```bash
-python -m cli adicionar-campanha --telefone 5531999629004
+python -m cli executar-workflow --id 1
 ```
 
-### Verificação de Dados
-
-- **Listar atendimentos:**
-
+### **4. Monitorar Respostas**
 ```bash
-python -m cli atendimentos
+python -m cli processar-resposta --telefone 5531999629004 --resposta 1
 ```
 
-- **Buscar atendimento específico:**
+## 💡 Dicas de Uso
 
+- **Use `--help`** após qualquer comando para ver opções detalhadas
+- **Telefone** deve estar no formato internacional: 5531999629004
+- **Data** deve estar no formato: DD/MM/AAAA
+- **Hora** deve estar no formato: HH:MM
+- **Resposta** deve ser 1 (SIM) ou 0 (NÃO)
+
+## 🔍 Troubleshooting
+
+### **Comando não encontrado**
 ```bash
-python -m cli buscar --telefone 5531999629004
+python -m cli help  # Ver todos os comandos disponíveis
 ```
 
-## ✅ Status de Implementação
+### **Erro de conexão**
+```bash
+python -m cli test-db        # Testar banco
+python -m cli test-conexao   # Testar Botconversa
+```
 
-Todos os comandos foram **implementados e testados com sucesso**:
-
-- ✅ `criar-atendimento` - Funcionando perfeitamente
-- ✅ `adicionar-botconversa` - Integração com API funcionando
-- ✅ `adicionar-campanha` - Adição automática à campanha padrão
-- ✅ Banco de dados integrado (PostgreSQL + Schema SantaCasa)
-- ✅ Conexão com Botconversa API funcionando
-- ✅ Tratamento de erros e validações implementadas
-
-## 🔧 Requisitos Técnicos
-
-- Python 3.11+
-- Dependências: `click`, `rich`, `sqlalchemy`, `psycopg2-binary`
-- Banco PostgreSQL configurado
-- API Key do Botconversa configurada no `.env`
-
-## 📝 Notas Importantes
-
-- **Telefone**: Sempre use o formato `5531999629004` (código do país + DDD + número)
-- **Data**: Use o formato `DD/MM/AAAA`
-- **Hora**: Use o formato `HH:MM` (24h)
-- **Campanha**: Por padrão, usa "Confirmação de Consultas" (ID: 289860)
-- **Schema**: Todas as tabelas estão no schema `SantaCasa`
-
-## 🚀 Próximos Passos
-
-O sistema CLI está completamente funcional para:
-
-1. ✅ Criação de atendimentos
-2. ✅ Integração com Botconversa
-3. ✅ Gerenciamento de campanhas
-4. ✅ Consultas e listagens
-
-Próximas funcionalidades planejadas:
-
-- Envio de mensagens personalizadas
-- Execução de workflows automatizados
-- Processamento de respostas dos pacientes
+### **Erro de parâmetros**
+```bash
+python -m cli [comando] --help  # Ver opções do comando
+```
