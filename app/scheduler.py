@@ -465,7 +465,7 @@ class AppointmentScheduler:
             atendimento.subscriber_id = subscriber_id
             atendimento.mensagem_enviada = "Workflow completo executado automaticamente"
             atendimento.atualizado_em = datetime.now()
-            atendimento.status_confirmacao = StatusConfirmacao.PENDENTE
+            atendimento.status = StatusConfirmacao.PENDENTE
 
             # Commit das alterações
             db.commit()
@@ -548,8 +548,8 @@ class AppointmentScheduler:
             hora_formatada = consulta.data_consulta.strftime("%H:%M")
 
             # Obtém as configurações do hospital
-            hospital_name = settings.hospital_name or "Santa Casa de Belo Horizonte"
-            hospital_phone = settings.hospital_phone or "(31) 3238-8100"
+            hospital_name = settings.hospital_name
+            hospital_phone = settings.hospital_phone 
 
             # Cria mensagem de lembrete baseada no tipo
             if tipo_lembrete == "48h":

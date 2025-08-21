@@ -3,62 +3,54 @@ version: "3.8"
 services:
   # Aplicação principal
   app:
-    build: .
-    ports:
-      - "${APP_PORT:-8000}:8000"
-    environment:
-      # Banco de dados (configurável via .env)
-      - DATABASE_TYPE=${DOCKER_DATABASE_TYPE:-postgresql}
-
-      # URLs dos bancos Docker
-      - ORACLE_URL=oracle+cx_oracle://${ORACLE_DOCKER_USER:-system}:${ORACLE_DOCKER_PASSWORD:-oracle}@${ORACLE_DOCKER_HOST:-db-oracle}:${ORACLE_DOCKER_PORT:-1521}/${ORACLE_DOCKER_SERVICE:-XE}
-      - POSTGRESQL_URL=postgresql://${POSTGRESQL_DOCKER_USER:-postgres}:${POSTGRESQL_DOCKER_PASSWORD:-1234}@${POSTGRESQL_DOCKER_HOST:-db-postgresql}:${POSTGRESQL_DOCKER_PORT:-5432}/${POSTGRESQL_DOCKER_DB:-santaCasa}
-      - FIREBIRD_URL=firebird://${FIREBIRD_DOCKER_USER:-SYSDBA}:${FIREBIRD_DOCKER_PASSWORD:-masterkey}@${FIREBIRD_DOCKER_HOST:-db-firebird}:${FIREBIRD_DOCKER_PORT:-3050}/${FIREBIRD_DOCKER_DB:-hospital_db}
-
-      # URL genérica baseada na escolha
-      - DATABASE_URL=${DATABASE_URL}
-
-      # Botconversa
-      - BOTCONVERSA_API_URL=${BOTCONVERSA_API_URL}
-      - BOTCONVERSA_API_KEY=${BOTCONVERSA_API_KEY}
-      - BOTCONVERSA_WEBHOOK_SECRET=${BOTCONVERSA_WEBHOOK_SECRET}
-
-      # Hospital
-      - HOSPITAL_NAME=${HOSPITAL_NAME}
-      - HOSPITAL_PHONE=${HOSPITAL_PHONE}
-      - HOSPITAL_ADDRESS=${HOSPITAL_ADDRESS}
-      - HOSPITAL_CITY=${HOSPITAL_CITY}
-      - HOSPITAL_STATE=${HOSPITAL_STATE}
-
-      # Webhook
-      - WEBHOOK_HOST=0.0.0.0
-      - WEBHOOK_PORT=8000
-      - WEBHOOK_URL=${WEBHOOK_URL}
-
-      # Scheduler
-      - SCHEDULER_CONFIRMATION_HOUR=${SCHEDULER_CONFIRMATION_HOUR}
-      - SCHEDULER_CONFIRMATION_MINUTE=${SCHEDULER_CONFIRMATION_MINUTE}
-      - SCHEDULER_REMINDER_HOUR=${SCHEDULER_REMINDER_HOUR}
-      - SCHEDULER_REMINDER_MINUTE=${SCHEDULER_REMINDER_MINUTE}
-      - SCHEDULER_ENABLE_CONFIRMATION_JOB=${SCHEDULER_ENABLE_CONFIRMATION_JOB}
-      - SCHEDULER_ENABLE_REMINDER_JOB=${SCHEDULER_ENABLE_REMINDER_JOB}
-
-      # Aplicação
-      - DEBUG=${DEBUG}
-      - LOG_LEVEL=${LOG_LEVEL}
-      - MAX_WORKERS=${MAX_WORKERS:-4}
-      - WORKER_TIMEOUT=${WORKER_TIMEOUT:-30}
-    volumes:
-      - ./logs:/app/logs
+    build:
+      context: .
     depends_on:
-      - db-postgresql
-    restart: unless-stopped
+      db-postgresql:
+        condition: service_started
+    environment:
+      BOTCONVERSA_API_KEY: be4844e4-6e0d-4cf2-9118-9be35304d067
+      BOTCONVERSA_API_URL: https://api.botconversa.com.br/v1
+      BOTCONVERSA_WEBHOOK_SECRET: your_botconversa_webhook_secret
+      DATABASE_TYPE: postgresql
+      DATABASE_URL: postgresql://postgres:1234@localhost:5432/santaCasa
+      DEBUG: "True"
+      FIREBIRD_URL: firebird://SYSDBA:masterkey@db-firebird:3050/hospital_db
+      HOSPITAL_ADDRESS: Rua Domingos Vieira, 590 - Santa Efigênia
+      HOSPITAL_CITY: Belo Horizonte
+      HOSPITAL_NAME: Santa Casa de Belo Horizonte
+      HOSPITAL_PHONE: (31) 3238-8100
+      HOSPITAL_STATE: MG
+      LOG_LEVEL: INFO
+      MAX_WORKERS: '4'
+      ORACLE_URL: oracle+cx_oracle://system:oracle@db-oracle:1521/XE
+      POSTGRESQL_URL: postgresql://postgres:1234@db-postgresql:5432/santaCasa
+      SCHEDULER_CONFIRMATION_HOUR: '9'
+      SCHEDULER_CONFIRMATION_MINUTE: '0'
+      SCHEDULER_ENABLE_CONFIRMATION_JOB: "True"
+      SCHEDULER_ENABLE_REMINDER_JOB: "True"
+      SCHEDULER_REMINDER_HOUR: '14'
+      SCHEDULER_REMINDER_MINUTE: '0'
+      WEBHOOK_HOST: 0.0.0.0
+      WEBHOOK_PORT: '5001'
+      WEBHOOK_URL: https://meuservidor.com/webhook/botconversa
+      WORKER_TIMEOUT: '30'
     healthcheck:
-      test: [ "CMD", "curl", "-f", "http://localhost:8000/health" ]
       interval: 30s
-      timeout: 10s
       retries: 3
       start_period: 40s
+      test:
+        - CMD
+        - curl
+        - -f
+        - http://localhost:5001/health
+      timeout: 10s
+    ports:
+      - published: 5001
+        target: 5001
+    restart: unless-stopped
+    volumes:
+      - ./logs:/app/logs:rw
 
   # Banco Oracle
   db-oracle:

@@ -283,6 +283,7 @@ class BotconversaService:
                 especialidade=dados["especialidade"],
                 data_consulta=dados["data_consulta"],
                 observacoes=dados.get("observacoes"),
+                nr_seq_agenda=dados.get("nr_seq_agenda", 0),  # Campo obrigatório
                 status=StatusConfirmacao.PENDENTE,  # Campo de controle inicial
             )
 
@@ -373,13 +374,13 @@ class BotconversaService:
             hora_formatada = atendimento.data_consulta.strftime("%H:%M")
 
             # Obtém as configurações do hospital
-            hospital_name = settings.hospital_name or "Santa Casa de Belo Horizonte"
-            hospital_phone = settings.hospital_phone or "(31) 3238-8100"
+            hospital_name = settings.hospital_name 
+            hospital_phone = settings.hospital_phone
             hospital_address = (
-                settings.hospital_address or "Rua Domingos Vieira, 590 - Santa Efigênia"
+                settings.hospital_address 
             )
-            hospital_city = settings.hospital_city or "Belo Horizonte"
-            hospital_state = settings.hospital_state or "MG"
+            hospital_city = settings.hospital_city 
+            hospital_state = settings.hospital_state 
 
             # Monta o endereço completo
             endereco_completo = (

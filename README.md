@@ -393,7 +393,10 @@ python -m cli test-conexao     # Testa API Botconversa
 python -m cli atendimentos              # Lista todos os atendimentos
 python -m cli listar-atendimentos       # Lista atendimentos pendentes
 python -m cli buscar-atendimento        # Busca atendimento por telefone
-python -m cli criar-atendimento         # Cria novo atendimento
+### **1. Criar Atendimento**
+```bash
+python -m cli criar-atendimento --nome "João Silva" --telefone 5531999629004 --medico "Dr. Carlos" --especialidade "Cardiologia" --data "15/01/2025" --hora "14:00" --nr-seq-agenda 12345
+```
 
 # Operações Botconversa
 python -m cli adicionar-botconversa     # Adiciona subscriber no Botconversa

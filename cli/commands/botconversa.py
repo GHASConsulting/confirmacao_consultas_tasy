@@ -255,13 +255,14 @@ def processar_resposta(telefone, resposta):
 @click.option("--especialidade", required=True, help="Especialidade médica")
 @click.option("--data", required=True, help="Data da consulta (DD/MM/AAAA)")
 @click.option("--hora", required=True, help="Horário da consulta (HH:MM)")
+@click.option("--nr-seq-agenda", required=True, type=int, help="Número sequencial da agenda")
 @click.option("--observacoes", help="Observações adicionais")
-def criar_atendimento(nome, telefone, medico, especialidade, data, hora, observacoes):
+def criar_atendimento(nome, telefone, medico, especialidade, data, hora, nr_seq_agenda, observacoes):
     """
     Cria um novo atendimento no banco de dados.
 
     Exemplo:
-    python -m cli criar-atendimento --nome "João Silva" --telefone 5531999629004 --medico "Dr. Carlos" --especialidade "Cardiologia" --data "15/08/2025" --hora "14:00"
+    python -m cli criar-atendimento --nome "João Silva" --telefone 5531999629004 --medico "Dr. Carlos" --especialidade "Cardiologia" --data "15/08/2025" --hora "14:00" --nr-seq-agenda 12345
     """
     try:
         from app.database.manager import initialize_database, get_db
@@ -295,6 +296,7 @@ def criar_atendimento(nome, telefone, medico, especialidade, data, hora, observa
             data_consulta=data_obj,
             observacoes=observacoes,
             status=StatusConfirmacao.PENDENTE,
+            nr_seq_agenda=nr_seq_agenda,
             criado_em=datetime.now(),
             atualizado_em=datetime.now(),
         )

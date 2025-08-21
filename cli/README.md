@@ -13,7 +13,7 @@ Cria um novo atendimento no banco de dados.
 **Uso:**
 
 ```bash
-python -m cli criar-atendimento --nome "João Silva" --telefone 5531999629004 --medico "Dr. Carlos" --especialidade "Cardiologia" --data "15/01/2025" --hora "14:00"
+python -m cli criar-atendimento --nome "João Silva" --telefone 5531999629004 --medico "Dr. Carlos" --especialidade "Cardiologia" --data "15/01/2025" --hora "14:00" --nr-seq-agenda 12345
 ```
 
 **Opções:**
@@ -212,7 +212,7 @@ python -m cli help
 
 ### **1. Criar Atendimento**
 ```bash
-python -m cli criar-atendimento --nome "João Silva" --telefone 5531999629004 --medico "Dr. Carlos" --especialidade "Cardiologia" --data "15/01/2025" --hora "14:00"
+python -m cli criar-atendimento --nome "João Silva" --telefone 5531999629004 --medico "Dr. Carlos" --especialidade "Cardiologia" --data "15/01/2025" --hora "14:00" --nr-seq-agenda 12345
 ```
 
 ### **2. Adicionar no Botconversa**

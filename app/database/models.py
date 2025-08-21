@@ -66,9 +66,10 @@ class Atendimento(Base):
         tipo_ultimo_lembrete: Tipo do último lembrete ("48h" ou "12h")
         criado_em: Data/hora de criação do registro
         atualizado_em: Data/hora da última atualização
+        nr_seq_agenda: Número sequencial da agenda (campo obrigatório)
     """
 
-    __tablename__ = "atendimentos"
+    __tablename__ = "ghas_tbl_pac_agendados"
 
     id = Column(Integer, primary_key=True, index=True)
 
@@ -111,6 +112,9 @@ class Atendimento(Base):
     tipo_ultimo_lembrete = Column(
         String(10)
     )  # Tipo do último lembrete ("48h" ou "12h")
+
+    # Campo obrigatório para número sequencial da agenda
+    nr_seq_agenda = Column(Integer, nullable=False)
 
     # Timestamps
     enviado_em = Column(DateTime(timezone=True))
