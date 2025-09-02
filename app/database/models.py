@@ -85,12 +85,12 @@ class Atendimento(Base):
     observacoes = Column(Text)
 
     # Campo de controle para confirmação
-    status = Column(
+    status_confirmacao= Column(
         Enum(StatusConfirmacao), default=StatusConfirmacao.PENDENTE, nullable=False
     )
 
     # Dados do Botconversa
-    subscriber_id = Column(Integer, unique=True, nullable=True, index=True)
+    subscriber_id = Column(Integer, nullable=True, index=True)
 
     # Dados de mensagem e resposta
     mensagem_enviada = Column(Text)

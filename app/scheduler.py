@@ -110,13 +110,13 @@ class AppointmentScheduler:
             # Job 3: Monitorar novos atendimentos (NOVO - executa a cada 30 minutos)
             self.scheduler.add_job(
                 func=self._job_monitorar_novos_atendimentos,
-                trigger=IntervalTrigger(minutes=30),  # A cada 30 minutos
+                trigger=IntervalTrigger(minutes=settings.scheduler_monitoring_interval_minutes),
                 id="monitorar_novos_atendimentos",
                 name="Monitorar novos atendimentos e executar workflow completo",
                 replace_existing=True,
             )
             logger.info(
-                "Job de monitoramento de novos atendimentos agendado (a cada 30 minutos)"
+                f"Job de monitoramento de novos atendimentos agendado (a cada {settings.scheduler_monitoring_interval_minutes} minutos)"
             )
 
             logger.info("Jobs básicos configurados com base nas configurações do .env")
@@ -155,15 +155,11 @@ class AppointmentScheduler:
                 consultas_para_confirmar = (
                     db.query(Atendimento)
                     .filter(
-                        Atendimento.data_consulta <= data_limite,
-                        Atendimento.data_consulta > datetime.now(),
-                        Atendimento.status == StatusConfirmacao.PENDENTE,
-                        Atendimento.subscriber_id.isnot(
-                            None
-                        ),  # Tem subscriber no Botconversa
-                        Atendimento.mensagem_enviada.is_(
-                            None
-                        ),  # Mensagem ainda não foi enviada
+                        Atendimento.data_consulta > datetime.now(),  # Consulta no futuro
+                        Atendimento.data_consulta <= datetime.now() + timedelta(hours=settings.confirmation_window_hours),  # Dentro de 72h
+                        Atendimento.status_confirmacao == StatusConfirmacao.PENDENTE,
+                        Atendimento.subscriber_id.isnot(None),  # Tem subscriber no Botconversa
+                        Atendimento.mensagem_enviada.is_(None),  # Mensagem ainda não foi enviada
                     )
                     .order_by(Atendimento.data_consulta.asc())
                     .all()
@@ -239,7 +235,7 @@ class AppointmentScheduler:
                 consultas_para_lembrete = (
                     db.query(Atendimento)
                     .filter(
-                        Atendimento.status == StatusConfirmacao.PENDENTE,
+                        Atendimento.status_confirmacao == StatusConfirmacao.PENDENTE,
                         Atendimento.subscriber_id.isnot(
                             None
                         ),  # Tem subscriber no Botconversa
@@ -261,40 +257,26 @@ class AppointmentScheduler:
                 # Processa cada consulta
                 for consulta in consultas_para_lembrete:
                     try:
-                        # Verifica se está na janela de lembrete
-                        if (
-                            consulta.data_consulta <= lembrete_48h
-                            and consulta.data_consulta > agora
-                        ):
+                        # Verifica se está na janela de lembrete baseado na data da consulta
+                        tempo_ate_consulta = consulta.data_consulta - datetime.now()
+                        
+                        if tempo_ate_consulta <= timedelta(hours=48) and tempo_ate_consulta > timedelta(hours=12):
                             # Lembrete 48h antes
                             if self._pode_enviar_lembrete(consulta, "48h"):
-                                logger.info(
-                                    f"Enviando lembrete 48h para {consulta.nome_paciente}"
-                                )
-                                self._enviar_lembrete(
-                                    botconversa_service, consulta, "48h", db
-                                )
+                                logger.info(f"Enviando lembrete 48h para {consulta.nome_paciente}")
+                                self._enviar_lembrete(botconversa_service, consulta, "48h", db)
 
-                        elif (
-                            consulta.data_consulta <= lembrete_12h
-                            and consulta.data_consulta > agora
-                        ):
+                        elif tempo_ate_consulta <= timedelta(hours=12) and tempo_ate_consulta > timedelta(hours=0):
                             # Lembrete 12h antes
                             if self._pode_enviar_lembrete(consulta, "12h"):
-                                logger.info(
-                                    f"Enviando lembrete 12h para {consulta.nome_paciente}"
-                                )
-                                self._enviar_lembrete(
-                                    botconversa_service, consulta, "12h", db
-                                )
+                                logger.info(f"Enviando lembrete 12h para {consulta.nome_paciente}")
+                                self._enviar_lembrete(botconversa_service, consulta, "12h", db)
 
-                        elif consulta.data_consulta <= agora:
+                        elif consulta.data_consulta <= datetime.now():
                             # Consulta passou sem confirmação
-                            logger.info(
-                                f"Marcando consulta {consulta.id} como SEM_RESPOSTA"
-                            )
-                            consulta.status = StatusConfirmacao.SEM_RESPOSTA
-                            consulta.atualizado_em = agora
+                            logger.info(f"Marcando consulta {consulta.id} como SEM_RESPOSTA")
+                            consulta.status_confirmacao = StatusConfirmacao.SEM_RESPOSTA
+                            consulta.atualizado_em = datetime.now()
                             db.commit()
 
                     except Exception as e:
@@ -317,7 +299,7 @@ class AppointmentScheduler:
         """
         Job para monitorar novos atendimentos e executar workflow completo.
 
-        Este job roda a cada 30 minutos e identifica atendimentos que:
+        Este job roda a cada x minutos (configurável via .env) e identifica atendimentos que:
         - Não têm subscriber_id (não foram processados pelo Botconversa)
         - Precisam do workflow completo executado
         """
@@ -341,7 +323,7 @@ class AppointmentScheduler:
                     db.query(Atendimento)
                     .filter(
                         Atendimento.subscriber_id.is_(None),  # Não tem subscriber_id
-                        Atendimento.status
+                        Atendimento.status_confirmacao
                         == StatusConfirmacao.PENDENTE,  # Status pendente
                         Atendimento.data_consulta
                         > datetime.now(),  # Consulta no futuro
@@ -414,35 +396,62 @@ class AppointmentScheduler:
 
             # PASSO 1: Criar subscriber no Botconversa
             logger.info(f"PASSO 1: Criando subscriber para {atendimento.nome_paciente}")
-            subscriber_id = botconversa_service.criar_subscriber(
-                atendimento.nome_paciente, atendimento.telefone
+            
+            # Separar nome e sobrenome
+            nome_completo = atendimento.nome_paciente.strip()
+            partes_nome = nome_completo.split(' ', 1)
+            nome = partes_nome[0]
+            sobrenome = partes_nome[1] if len(partes_nome) > 1 else ""
+            
+            # Adicionar data e hora da consulta para identificação única
+            data_hora_consulta = atendimento.data_consulta.strftime("%d/%m %Hh")
+            sobrenome_completo = f"{sobrenome} {data_hora_consulta}".strip()
+            
+            logger.info(f"📅 Data/hora da consulta: {atendimento.data_consulta}")
+            logger.info(f"📅 Data/hora formatada: {data_hora_consulta}")
+            logger.info(f"👤 Nome completo: {nome} {sobrenome_completo}")
+            
+            subscriber_data = botconversa_service.criar_subscriber(
+                atendimento.telefone, nome, sobrenome_completo
             )
 
-            if not subscriber_id:
+            if not subscriber_data:
                 logger.error(
                     f"Falha ao criar subscriber para {atendimento.nome_paciente}"
                 )
+                return False
+
+            # Extrair o ID do subscriber do dicionário retornado
+            subscriber_id = subscriber_data.get('id')
+            if not subscriber_id:
+                logger.error(f"Subscriber criado mas sem ID válido para {atendimento.nome_paciente}")
                 return False
 
             logger.info(f"Subscriber criado com ID: {subscriber_id}")
             logger.info(f"🏷️ Etiqueta 'subscriber_id' adicionada automaticamente ao subscriber {subscriber_id}")
             logger.info(f"📝 Campo personalizado 'subscriber_id' adicionado automaticamente ao subscriber {subscriber_id}")
 
-            # PASSO 2: Adicionar à campanha "Confirmação de Consultas"
-            logger.info(f"PASSO 2: Adicionando à campanha")
+            # PASSO 2: Salvar subscriber_id no banco ANTES de continuar
+            logger.info(f"PASSO 2: Salvando subscriber_id no banco")
+            atendimento.subscriber_id = subscriber_id
+            atendimento.atualizado_em = datetime.now()
+            db.commit()
+            logger.info(f"Subscriber_id {subscriber_id} salvo no banco para {atendimento.nome_paciente}")
+
+            # PASSO 3: Adicionar à campanha "Confirmação de Consultas"
+            logger.info(f"PASSO 3: Adicionando à campanha")
             sucesso_campanha = botconversa_service.adicionar_subscriber_campanha(
                 subscriber_id,
                 campaign_id=289860,  # ID da campanha "Confirmação de Consultas"
             )
 
             if not sucesso_campanha:
-                logger.error(
-                    f"Falha ao adicionar à campanha: {atendimento.nome_paciente}"
+                logger.warning(
+                    f"Falha ao adicionar à campanha: {atendimento.nome_paciente} (continua mesmo assim)"
                 )
-                # Continua mesmo assim, pois a mensagem pode ser enviada
 
-            # PASSO 3: Enviar mensagem de confirmação
-            logger.info(f"PASSO 3: Enviando mensagem de confirmação")
+            # PASSO 4: Enviar mensagem de confirmação
+            logger.info(f"PASSO 4: Enviando mensagem de confirmação")
             sucesso_mensagem = botconversa_service.enviar_mensagem_consulta(atendimento)
 
             if not sucesso_mensagem:
@@ -451,21 +460,20 @@ class AppointmentScheduler:
                 )
                 return False
 
-            # PASSO 4: Enviar fluxo interativo
-            logger.info(f"PASSO 4: Enviando fluxo interativo")
-            sucesso_fluxo = botconversa_service.enviar_fluxo(subscriber_id)
+            # PASSO 5: Enviar fluxo interativo
+            logger.info(f"PASSO 5: Enviando fluxo interativo")
+            sucesso_fluxo = botconversa_service.enviar_fluxo(subscriber_id, flow_id=7725640)
 
             if not sucesso_fluxo:
                 logger.warning(
                     f"Fluxo não enviado para {atendimento.nome_paciente}, mas continuando"
                 )
 
-            # PASSO 5: Atualizar banco de dados
-            logger.info(f"PASSO 5: Atualizando banco de dados")
-            atendimento.subscriber_id = subscriber_id
+            # PASSO 6: Finalizar atualização no banco de dados
+            logger.info(f"PASSO 6: Finalizando atualização no banco de dados")
             atendimento.mensagem_enviada = "Workflow completo executado automaticamente"
+            atendimento.status_confirmacao = StatusConfirmacao.PENDENTE
             atendimento.atualizado_em = datetime.now()
-            atendimento.status = StatusConfirmacao.PENDENTE
 
             # Commit das alterações
             db.commit()
@@ -589,6 +597,13 @@ class AppointmentScheduler:
             )
 
             if sucesso:
+                # Envia o fluxo interativo após a mensagem
+                logger.info(f"Enviando fluxo interativo para lembrete {tipo_lembrete}")
+                sucesso_fluxo = botconversa_service.enviar_fluxo(consulta.subscriber_id, flow_id=7725640)
+                
+                if not sucesso_fluxo:
+                    logger.warning(f"Fluxo não enviado para lembrete {tipo_lembrete}, mas continuando")
+
                 # Atualiza o atendimento com informação do lembrete e controle de frequência
                 consulta.mensagem_enviada = f"Lembrete {tipo_lembrete}: {mensagem}"
                 consulta.atualizado_em = datetime.now()

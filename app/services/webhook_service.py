@@ -13,6 +13,7 @@ from typing import Any, Dict, Optional
 
 from loguru import logger
 from sqlalchemy.orm import Session
+from sqlalchemy import text
 
 from app.database.models import (
     Atendimento,
@@ -267,6 +268,8 @@ class WebhookService:
             )
 
             # Busca atendimento por subscriber_id
+            logger.info(f"🔍 Buscando atendimento para subscriber_id: {subscriber_id}")
+            
             atendimento = (
                 self.db.query(Atendimento)
                 .filter(Atendimento.subscriber_id == subscriber_id)
@@ -282,22 +285,24 @@ class WebhookService:
                     "error": f"Atendimento não encontrado para subscriber_id: {subscriber_id}",
                 }
 
+            logger.info(f"✅ Atendimento encontrado: ID {atendimento.id} - {atendimento.nome_paciente} - {atendimento.data_consulta}")
+
             # Processa a resposta
             logger.info(f"Processando resposta: {resposta}")
-            logger.info(f"Status atual do atendimento: {atendimento.status}")
+            logger.info(f"Status atual do atendimento: {atendimento.status_confirmacao}")
             
             if resposta == "1":
                 # Confirmação
                 logger.info("Definindo status como CONFIRMADO")
-                atendimento.status = StatusConfirmacao.CONFIRMADO
+                atendimento.status_confirmacao = StatusConfirmacao.CONFIRMADO
                 mensagem_status = "CONFIRMADO"
-                logger.info(f"Status definido: {atendimento.status}")
+                logger.info(f"Status definido: {atendimento.status_confirmacao}")
             elif resposta == "0":
                 # Cancelamento
                 logger.info("Definindo status como CANCELADO")
-                atendimento.status = StatusConfirmacao.CANCELADO
+                atendimento.status_confirmacao = StatusConfirmacao.CANCELADO
                 mensagem_status = "CANCELADO"
-                logger.info(f"Status definido: {atendimento.status}")
+                logger.info(f"Status definido: {atendimento.status_confirmacao}")
             else:
                 logger.warning(f"Resposta inválida: {resposta}")
                 return {
@@ -310,12 +315,12 @@ class WebhookService:
             atendimento.respondido_em = datetime.now()
             atendimento.resposta_paciente = resposta
             atendimento.atualizado_em = datetime.now()
-            logger.info(f"Campos atualizados. Status final: {atendimento.status}")
+            logger.info(f"Campos atualizados. Status final: {atendimento.status_confirmacao}")
 
             # Salva no banco
             logger.info("Fazendo commit no banco...")
-            logger.info(f"Status antes do commit: {atendimento.status}")
-            logger.info(f"Status antes do commit (value): {atendimento.status.value if atendimento.status else 'None'}")
+            logger.info(f"Status antes do commit: {atendimento.status_confirmacao}")
+            logger.info(f"Status antes do commit (value): {atendimento.status_confirmacao.value if atendimento.status_confirmacao else 'None'}")
             
             # Força o flush para garantir que as mudanças sejam enviadas para o banco
             self.db.flush()
@@ -325,10 +330,35 @@ class WebhookService:
             self.db.commit()
             logger.info("Commit realizado com sucesso!")
             
+            #Chamar procedure Oracle para sincronizar com sistema legado
+            try:
+                logger.info(f"Chamando procedure Oracle para atendimento {atendimento.id}")
+                logger.info(f"📅 Data/hora da consulta: {atendimento.data_consulta}")
+                logger.info(f"👤 Nome do paciente: {atendimento.nome_paciente}")
+                
+                # Determina o status para a procedure
+                status_procedure = "CONFIRMADO" if resposta == "1" else "CANCELADO"
+                
+                # Chama a procedure
+                self.db.execute(
+                    text("CALL ghas_prc_alt_status_age(:id_agenda_p, :status_p)"),
+                    {
+                        "id_agenda_p": atendimento.id,
+                        "status_p": status_procedure
+                    }
+                )
+                
+                logger.info(f"Procedure Oracle executada com sucesso para atendimento {atendimento.id}")
+                
+            except Exception as proc_error:
+                logger.error(f"Erro ao executar procedure Oracle: {str(proc_error)}")
+                logger.warning("Atendimento foi salvo, mas procedure falhou - verificar manualmente")
+                # Não faz rollback - atendimento já foi salvo com sucesso
+            
             # Verifica se foi salvo
             self.db.refresh(atendimento)
-            logger.info(f"Status após refresh: {atendimento.status}")
-            logger.info(f"Status após refresh (value): {atendimento.status.value if atendimento.status else 'None'}")
+            logger.info(f"Status após refresh: {atendimento.status_confirmacao}")
+            logger.info(f"Status após refresh (value): {atendimento.status_confirmacao.value if atendimento.status_confirmacao else 'None'}")
 
             logger.info(
                 f"Atendimento {atendimento.id} atualizado para {mensagem_status}"

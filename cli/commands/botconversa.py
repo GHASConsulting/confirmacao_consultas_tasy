@@ -53,7 +53,7 @@ def listar_atendimentos(todos, status):
         # Busca atendimentos baseado nos filtros
         if todos:
             if status:
-                atendimentos = db.query(Atendimento).filter(Atendimento.status == status).all()
+                atendimentos = db.query(Atendimento).filter(Atendimento.status_confirmacao == status).all()
             else:
                 atendimentos = db.query(Atendimento).all()
         else:
@@ -82,14 +82,14 @@ def listar_atendimentos(todos, status):
             data_display = a.data_consulta.strftime("%d/%m/%Y %H:%M") if a.data_consulta else "N/A"
             
             # Formata o status com cores
-            status_display = a.status.value if a.status else "N/A"
+            status_display = a.status_confirmacao.value if a.status_confirmacao else "N/A"
             
             table.add_row(
                 str(a.id),
-                a.nome_paciente[:18] + "..." if len(a.nome_paciente) > 18 else a.nome_paciente,
+                a.nome_paciente[:18] + "..." if a.nome_paciente and len(a.nome_paciente) > 18 else (a.nome_paciente or "N/A"),
                 a.telefone,
-                a.nome_medico[:18] + "..." if len(a.nome_medico) > 18 else a.nome_medico,
-                a.especialidade[:14] + "..." if len(a.especialidade) > 14 else a.especialidade,
+                a.nome_medico[:18] + "..." if a.nome_medico and len(a.nome_medico) > 18 else (a.nome_medico or "N/A"),
+                a.especialidade[:14] + "..." if a.especialidade and len(a.especialidade) > 14 else (a.especialidade or "N/A"),
                 data_display,
                 status_display,
                 subscriber_display,
@@ -99,9 +99,9 @@ def listar_atendimentos(todos, status):
         
         # Estatísticas
         total = len(atendimentos)
-        pendentes = len([a for a in atendimentos if a.status and a.status.value == "PENDENTE"])
-        confirmados = len([a for a in atendimentos if a.status and a.status.value == "CONFIRMADO"])
-        cancelados = len([a for a in atendimentos if a.status and a.status.value == "CANCELADO"])
+        pendentes = len([a for a in atendimentos if a.status_confirmacao and a.status_confirmacao.value == "PENDENTE"])
+        confirmados = len([a for a in atendimentos if a.status_confirmacao and a.status_confirmacao.value == "CONFIRMADO"])
+        cancelados = len([a for a in atendimentos if a.status_confirmacao and a.status_confirmacao.value == "CANCELADO"])
         
         console.print(f"\n📊 Estatísticas:")
         console.print(f"   Total: {total}")
@@ -295,7 +295,7 @@ def criar_atendimento(nome, telefone, medico, especialidade, data, hora, nr_seq_
             especialidade=especialidade,
             data_consulta=data_obj,
             observacoes=observacoes,
-            status=StatusConfirmacao.PENDENTE,
+            status_confirmacao=StatusConfirmacao.PENDENTE,
             nr_seq_agenda=nr_seq_agenda,
             criado_em=datetime.now(),
             atualizado_em=datetime.now(),
@@ -314,7 +314,7 @@ def criar_atendimento(nome, telefone, medico, especialidade, data, hora, nr_seq_
         console.print(
             f"📅 Data: {novo_atendimento.data_consulta.strftime('%d/%m/%Y %H:%M')}"
         )
-        console.print(f"📊 Status: {novo_atendimento.status.value}")
+        console.print(f"📊 Status: {novo_atendimento.status_confirmacao.value}")
 
         db.close()
 

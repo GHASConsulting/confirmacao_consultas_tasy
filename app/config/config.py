@@ -74,13 +74,14 @@ class Settings(BaseSettings):
 
     # Webhook Configuration
     webhook_host: str = "0.0.0.0"  # Host para aceitar conexões externas
-    webhook_port: int = 8000  # Porta do servidor webhook
+    webhook_port: int = 5001  # Porta do servidor webhook
     webhook_url: Optional[str] = None  # URL pública do webhook
 
     # Scheduler Configuration
     reminder_interval: int = 24
     confirmation_window_hours: int = 72
-
+    scheduler_monitoring_interval_minutes: int = 30
+    
     # Scheduler Time Configuration
     scheduler_confirmation_hour: int = 9  # Hora para verificar confirmações (0-23)
     scheduler_confirmation_minute: int = 0  # Minuto para verificar confirmações (0-59)

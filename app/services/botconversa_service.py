@@ -488,8 +488,8 @@ Aguardamos sua confirmação! 🙏
                     novo_status = StatusConfirmacao.PENDENTE
                     interpretacao = "indefinido"
 
-            # Atualiza o campo de controle (status) e outros dados
-            atendimento.status = novo_status
+            # Atualiza o campo de controle (status_confirmacao) e outros dados
+            atendimento.status_confirmacao = novo_status
             atendimento.resposta_paciente = resposta
             atendimento.interpretacao_resposta = interpretacao
             atendimento.respondido_em = datetime.now()
@@ -517,7 +517,7 @@ Aguardamos sua confirmação! 🙏
         try:
             atendimentos = (
                 self.db.query(Atendimento)
-                .filter(Atendimento.status == StatusConfirmacao.PENDENTE)
+                .filter(Atendimento.status_confirmacao == StatusConfirmacao.PENDENTE)
                 .order_by(Atendimento.data_consulta.asc())
                 .all()
             )
@@ -573,7 +573,7 @@ Aguardamos sua confirmação! 🙏
                 logger.error(f"Atendimento não encontrado: {atendimento_id}")
                 return False
 
-            atendimento.status = novo_status
+            atendimento.status_confirmacao = novo_status
             atendimento.atualizado_em = datetime.now()
 
             self.db.commit()

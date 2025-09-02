@@ -1,40 +1,48 @@
-version: "3.8"
-
 services:
   # Aplicação principal
   app:
     build:
       context: .
-    depends_on:
-      db-postgresql:
-        condition: service_started
+      dockerfile: Dockerfile
     environment:
-      BOTCONVERSA_API_KEY: be4844e4-6e0d-4cf2-9118-9be35304d067
-      BOTCONVERSA_API_URL: https://api.botconversa.com.br/v1
-      BOTCONVERSA_WEBHOOK_SECRET: your_botconversa_webhook_secret
-      DATABASE_TYPE: postgresql
-      DATABASE_URL: postgresql://postgres:1234@localhost:5432/santaCasa
-      DEBUG: "True"
-      FIREBIRD_URL: firebird://SYSDBA:masterkey@db-firebird:3050/hospital_db
-      HOSPITAL_ADDRESS: Rua Domingos Vieira, 590 - Santa Efigênia
-      HOSPITAL_CITY: Belo Horizonte
-      HOSPITAL_NAME: Santa Casa de Belo Horizonte
-      HOSPITAL_PHONE: (31) 3238-8100
-      HOSPITAL_STATE: MG
-      LOG_LEVEL: INFO
-      MAX_WORKERS: '4'
-      ORACLE_URL: oracle+cx_oracle://system:oracle@db-oracle:1521/XE
-      POSTGRESQL_URL: postgresql://postgres:1234@db-postgresql:5432/santaCasa
-      SCHEDULER_CONFIRMATION_HOUR: '9'
-      SCHEDULER_CONFIRMATION_MINUTE: '0'
-      SCHEDULER_ENABLE_CONFIRMATION_JOB: "True"
-      SCHEDULER_ENABLE_REMINDER_JOB: "True"
-      SCHEDULER_REMINDER_HOUR: '14'
-      SCHEDULER_REMINDER_MINUTE: '0'
-      WEBHOOK_HOST: 0.0.0.0
-      WEBHOOK_PORT: '5001'
-      WEBHOOK_URL: https://meuservidor.com/webhook/botconversa
-      WORKER_TIMEOUT: '30'
+      # Botconversa API
+      BOTCONVERSA_API_KEY: ${BOTCONVERSA_API_KEY}
+      BOTCONVERSA_API_URL: ${BOTCONVERSA_API_URL}
+      BOTCONVERSA_WEBHOOK_SECRET: ${BOTCONVERSA_WEBHOOK_SECRET}
+
+      # Database Configuration
+      DATABASE_TYPE: ${DATABASE_TYPE}
+      DATABASE_URL: ${DATABASE_URL}
+      ORACLE_URL: ${ORACLE_URL}
+      POSTGRESQL_URL: ${POSTGRESQL_URL}
+      FIREBIRD_URL: ${FIREBIRD_URL}
+
+      # Application Configuration
+      DEBUG: ${DEBUG}
+      LOG_LEVEL: ${LOG_LEVEL}
+      MAX_WORKERS: ${MAX_WORKERS}
+      WORKER_TIMEOUT: ${WORKER_TIMEOUT}
+
+      # Hospital Information
+      HOSPITAL_NAME: ${HOSPITAL_NAME}
+      HOSPITAL_PHONE: ${HOSPITAL_PHONE}
+      HOSPITAL_ADDRESS: ${HOSPITAL_ADDRESS}
+      HOSPITAL_CITY: ${HOSPITAL_CITY}
+      HOSPITAL_STATE: ${HOSPITAL_STATE}
+
+      # Scheduler Configuration
+      SCHEDULER_CONFIRMATION_HOUR: ${SCHEDULER_CONFIRMATION_HOUR}
+      SCHEDULER_CONFIRMATION_MINUTE: ${SCHEDULER_CONFIRMATION_MINUTE}
+      SCHEDULER_REMINDER_HOUR: ${SCHEDULER_REMINDER_HOUR}
+      SCHEDULER_REMINDER_MINUTE: ${SCHEDULER_REMINDER_MINUTE}
+      SCHEDULER_ENABLE_CONFIRMATION_JOB: ${SCHEDULER_ENABLE_CONFIRMATION_JOB}
+      SCHEDULER_ENABLE_REMINDER_JOB: ${SCHEDULER_ENABLE_REMINDER_JOB}
+
+      # Webhook Configuration
+      WEBHOOK_HOST: ${WEBHOOK_HOST}
+      WEBHOOK_PORT: ${WEBHOOK_PORT}
+      WEBHOOK_URL: ${WEBHOOK_URL}
+
     healthcheck:
       interval: 30s
       retries: 3
@@ -45,14 +53,17 @@ services:
         - -f
         - http://localhost:5001/health
       timeout: 10s
+
     ports:
-      - published: 5001
+      - published: ${APP_PORT:-5001}
         target: 5001
+
     restart: unless-stopped
+
     volumes:
       - ./logs:/app/logs:rw
 
-  # Banco Oracle
+  # Banco Oracle (opcional - para desenvolvimento local)
   db-oracle:
     image: container-registry.oracle.com/database/express:21.3.0-xe
     environment:
@@ -73,7 +84,7 @@ services:
       retries: 5
       start_period: 120s
 
-  # Banco PostgreSQL
+  # Banco PostgreSQL (opcional - para desenvolvimento local)
   db-postgresql:
     image: postgres:15-alpine
     environment:
@@ -94,7 +105,7 @@ services:
       timeout: 5s
       retries: 5
 
-  # Banco Firebird
+  # Banco Firebird (opcional - para desenvolvimento local)
   db-firebird:
     image: jacobalberty/firebird:3.0
     environment:
