@@ -256,6 +256,8 @@ class WebhookService:
             subscriber_id = n8n_data.get("subscriber_id")
             resposta = n8n_data.get("resposta")
             nome_paciente = n8n_data.get("nome_paciente")
+            id_tabela = n8n_data.get("id_tabela")
+            nr_seq_agenda = n8n_data.get("nr_seq_agenda")
 
             if not telefone or not subscriber_id or not resposta:
                 return {
@@ -264,15 +266,30 @@ class WebhookService:
                 }
 
             logger.info(
-                f"Processando resposta N8N: {telefone} - {subscriber_id} - {resposta}"
+                f"Processando resposta N8N: {telefone} - {subscriber_id} - {resposta} - id_tabela: {id_tabela} - nr_seq_agenda: {nr_seq_agenda}"
             )
 
-            # Busca atendimento por subscriber_id
-            logger.info(f"🔍 Buscando atendimento para subscriber_id: {subscriber_id}")
+            # Busca atendimento por subscriber_id + id_tabela + nr_seq_agenda (busca mais precisa)
+            logger.info(f"🔍 Buscando atendimento para subscriber_id: {subscriber_id}, id_tabela: {id_tabela}, nr_seq_agenda: {nr_seq_agenda}")
+            
+            # Filtros para busca mais precisa
+            filtros = [Atendimento.subscriber_id == subscriber_id]
+            
+            if id_tabela:
+                filtros.append(Atendimento.id == int(id_tabela))
+                logger.info(f"🔍 Adicionando filtro por id_tabela: {id_tabela}")
+            
+            if nr_seq_agenda:
+                filtros.append(Atendimento.nr_seq_agenda == int(nr_seq_agenda))
+                logger.info(f"🔍 Adicionando filtro por nr_seq_agenda: {nr_seq_agenda}")
             
             atendimento = (
                 self.db.query(Atendimento)
-                .filter(Atendimento.subscriber_id == subscriber_id)
+                .filter(
+                    Atendimento.subscriber_id == subscriber_id,
+                    Atendimento.id == int(id_tabela) if id_tabela else True,
+                    Atendimento.nr_seq_agenda == int(nr_seq_agenda) if nr_seq_agenda else True
+                )
                 .first()
             )
 
@@ -372,6 +389,8 @@ class WebhookService:
                 "telefone": telefone,
                 "subscriber_id": subscriber_id,
                 "resposta": resposta,
+                "id_tabela": id_tabela,
+                "nr_seq_agenda": nr_seq_agenda,
             }
 
         except Exception as e:

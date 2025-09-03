@@ -438,6 +438,21 @@ class AppointmentScheduler:
             db.commit()
             logger.info(f"Subscriber_id {subscriber_id} salvo no banco para {atendimento.nome_paciente}")
 
+            # PASSO 2.1: Adicionar campos personalizados ao Botconversa
+            logger.info(f"PASSO 2.1: Adicionando campos personalizados ao Botconversa")
+            sucesso_id_tabela = botconversa_service.adicionar_campo_id_tabela(subscriber_id, atendimento.id)
+            sucesso_nr_seq = botconversa_service.adicionar_campo_nr_seq_agenda(subscriber_id, atendimento.nr_seq_agenda)
+            
+            if sucesso_id_tabela:
+                logger.info(f"✅ Campo personalizado id_tabela adicionado com sucesso ao subscriber {subscriber_id}")
+            else:
+                logger.warning(f"⚠️ Falha ao adicionar campo personalizado id_tabela ao subscriber {subscriber_id}")
+            
+            if sucesso_nr_seq:
+                logger.info(f"✅ Campo personalizado nr_seq_agenda adicionado com sucesso ao subscriber {subscriber_id}")
+            else:
+                logger.warning(f"⚠️ Falha ao adicionar campo personalizado nr_seq_agenda ao subscriber {subscriber_id}")
+
             # PASSO 3: Adicionar à campanha "Confirmação de Consultas"
             logger.info(f"PASSO 3: Adicionando à campanha")
             sucesso_campanha = botconversa_service.adicionar_subscriber_campanha(

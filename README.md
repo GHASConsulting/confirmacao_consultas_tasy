@@ -1,22 +1,27 @@
 # 🏥 Sistema de Confirmação de Consultas - Santa Casa
 
-Sistema automatizado para confirmação de consultas médicas via WhatsApp, integrado com Botconversa API e N8N para automação completa.
+Sistema automatizado para confirmação de consultas médicas via WhatsApp, integrado com Botconversa API, N8N e Oracle Database para automação completa.
 
 ## 🚀 **Funcionalidades Principais**
 
 - ✅ **Integração Botconversa**: Gestão de subscribers, campanhas e fluxos
 - 🤖 **Scheduler Automatizado**: Confirmações, lembretes e monitoramento de novos atendimentos
-- 🔄 **Webhook Inteligente**: Processamento de respostas via N8N
+- 🔄 **Webhook Inteligente**: Processamento de respostas via N8N com identificação única
 - 📊 **CLI Robusto**: Interface de linha de comando para testes e administração
 - 🐳 **Docker Ready**: Containerização completa com suporte a Oracle, PostgreSQL e Firebird
 - 📱 **Monitoramento Automático**: Detecção automática de novos atendimentos
 - 🔌 **Webhook N8N**: Processamento automático de respostas dos pacientes
 - 🛡️ **Tratamento de Erros**: Sistema robusto com rollback controlado
+- 🗄️ **Integração Oracle**: Suporte completo ao Oracle Database com Instant Client
+- 🏷️ **Campos Personalizados**: id_tabela e nr_seq_agenda para identificação única
+- ⚡ **Procedure Oracle**: Integração com stored procedures do sistema legado
+- ⚙️ **Scheduler Configurável**: Intervalos personalizáveis via variáveis de ambiente
 
 ## 🛠️ **Tecnologias**
 
 - **Backend**: FastAPI + Python 3.11
 - **Banco**: Suporte a Oracle, PostgreSQL e Firebird
+- **Oracle**: Instant Client 21.13 + cx_Oracle/oracledb
 - **ORM**: SQLAlchemy
 - **Scheduler**: APScheduler
 - **CLI**: Click + Rich
@@ -34,6 +39,7 @@ Sistema automatizado para confirmação de consultas médicas via WhatsApp, inte
 - ✅ Docker Compose disponível
 - ✅ Git instalado
 - ✅ Conta Botconversa com API Key
+- ✅ Oracle Database (para integração Oracle)
 
 ### **🔍 VERIFICAR DOCKER**
 
@@ -46,13 +52,13 @@ cd confirmacao_consultas
 cp env.example .env
 # Edite o .env com suas configurações
 
-# 3. Inicie com Docker (PostgreSQL)
-make postgresql-setup
+# 3. Inicie com Docker (Oracle)
+make oracle-setup
 
 # 4. Acesse: http://localhost:5001
 ```
 
-**🎯 Resultado**: Sistema completo rodando com PostgreSQL em menos de 5 minutos!
+**🎯 Resultado**: Sistema completo rodando com Oracle em menos de 5 minutos!
 
 ---
 
@@ -62,6 +68,7 @@ make postgresql-setup
 - Docker e Docker Compose (para instalação Docker)
 - Conta Botconversa com API Key
 - Git
+- Oracle Database (para integração Oracle)
 
 ## 🚀 **INSTALAÇÃO AUTOMÁTICA (RECOMENDADA)**
 
@@ -76,9 +83,9 @@ cp env.example .env
 # Edite o .env com suas configurações
 
 # 3. Inicie com Docker (escolha o banco)
-make postgresql-setup    # Para PostgreSQL (recomendado)
-make oracle-setup        # Para Oracle
-make firebird-setup      # Para Firebird
+make oracle-setup        # Para Oracle (recomendado)
+make postgresql-setup     # Para PostgreSQL
+make firebird-setup       # Para Firebird
 ```
 
 ### **🎯 O que o comando make faz automaticamente:**
@@ -114,7 +121,16 @@ nano .env  # ou use seu editor preferido
 # ========================================
 # ESCOLHA DO BANCO DE DADOS
 # ========================================
-DOCKER_DATABASE_TYPE=postgresql  # oracle, postgresql, firebird
+DOCKER_DATABASE_TYPE=oracle  # oracle, postgresql, firebird
+
+# ========================================
+# CONFIGURAÇÕES ORACLE (OBRIGATÓRIAS)
+# ========================================
+ORACLE_URL=oracle+cx_oracle://usuario:senha@host:porta/servico
+DATABASE_TYPE=oracle
+ORACLE_HOME=/opt/oracle/instantclient_21_13
+LD_LIBRARY_PATH=/opt/oracle/instantclient_21_13
+PATH=/opt/oracle/instantclient_21_13:$PATH
 
 # ========================================
 # CONFIGURAÇÕES BOTCONVERSA (OBRIGATÓRIAS)
@@ -136,20 +152,25 @@ HOSPITAL_STATE=MG
 # CONFIGURAÇÕES DE PORTA
 # ========================================
 APP_PORT=5001
+
+# ========================================
+# CONFIGURAÇÕES DO SCHEDULER
+# ========================================
+scheduler_monitoring_interval_minutes=5  # Intervalo de monitoramento
 ```
 
 ### **3️⃣ ESCOLHER E SUBIR O BANCO DE DADOS**
 
-**🎯 OPÇÃO A: PostgreSQL (Recomendado para começar)**
-
-```bash
-make postgresql-setup
-```
-
-**🎯 OPÇÃO B: Oracle**
+**🎯 OPÇÃO A: Oracle (Recomendado)**
 
 ```bash
 make oracle-setup
+```
+
+**🎯 OPÇÃO B: PostgreSQL**
+
+```bash
+make postgresql-setup
 ```
 
 **🎯 OPÇÃO C: Firebird**
@@ -200,21 +221,24 @@ make status                  # Status de todos os serviços
 ### **🗄️ SETUP ESPECÍFICO POR BANCO**
 
 ```bash
-make postgresql-setup        # Inicia com PostgreSQL
 make oracle-setup            # Inicia com Oracle
-make firebird-setup          # Inicia com Firebird
+make postgresql-setup         # Inicia com PostgreSQL
+make firebird-setup           # Inicia com Firebird
 
 # Banco de dados
-make db-shell-postgresql     # Shell PostgreSQL
-make db-shell-oracle         # Shell Oracle
-make db-shell-firebird       # Shell Firebird
+make db-shell-oracle          # Shell Oracle
+make db-shell-postgresql      # Shell PostgreSQL
+make db-shell-firebird        # Shell Firebird
+```
 
 ```bash
 make shell                   # Acessa shell do container
 make cli                     # Executa CLI da aplicação
+```
 
 ```bash
 make health                  # Verifica saúde da aplicação
+```
 
 ```bash
 make clean                   # Limpa tudo (containers, volumes, imagens)
@@ -227,9 +251,9 @@ make restart                 # Reinicia todos os serviços
 
 ### **📱 URLs de Acesso**
 
-- **Aplicação**: http://localhost:8000
-- **Health Check**: http://localhost:8000/health
-- **Scheduler Status**: http://localhost:8000/scheduler/status
+- **Aplicação**: http://localhost:5001
+- **Health Check**: http://localhost:5001/health
+- **Scheduler Status**: http://localhost:5001/scheduler/status
 
 ### **🔍 Verificar se está rodando**
 
@@ -241,7 +265,7 @@ make status
 make logs app
 
 # Ver logs do banco
-make logs db-postgresql  # ou db-oracle, db-firebird
+make logs db-oracle  # ou db-postgresql, db-firebird
 ```
 
 ---
@@ -253,11 +277,26 @@ make logs db-postgresql  # ou db-oracle, db-firebird
 ```bash
 # Verifique portas em uso
 netstat -tulpn | grep :5001
-netstat -tulpn | grep :5432
+netstat -tulpn | grep :1521
 
 # Pare serviços conflitantes ou mude portas no .env
 APP_PORT=5001
-POSTGRESQL_DOCKER_PORT=5433
+```
+
+### **🚫 Erro: Oracle Instant Client não encontrado**
+
+```bash
+# Verificar se o Instant Client está instalado
+ls -la /opt/oracle/instantclient_21_13
+
+# Configurar variáveis de ambiente
+export ORACLE_HOME=/opt/oracle/instantclient_21_13
+export LD_LIBRARY_PATH=/opt/oracle/instantclient_21_13
+export PATH=/opt/oracle/instantclient_21_13:$PATH
+
+# Ou criar arquivo permanente
+sudo nano /etc/profile.d/oracle.sh
+# Adicionar as variáveis acima
 ```
 
 ### **🚫 Erro: Docker não tem permissão**
@@ -274,7 +313,7 @@ sudo usermod -aG docker $USER
 # Limpar tudo e recomeçar
 make clean                   # Remove tudo
 make build                   # Reconstrói imagens
-make postgresql-setup        # Inicia novamente
+make oracle-setup            # Inicia novamente
 ```
 
 ### **🚫 Erro: Banco não conecta**
@@ -284,10 +323,10 @@ make postgresql-setup        # Inicia novamente
 make status
 
 # Ver logs do banco
-make logs db-postgresql
+make logs db-oracle
 
 # Reiniciar apenas o banco
-make restart db-postgresql
+make restart db-oracle
 ```
 
 ---
@@ -301,10 +340,10 @@ cd confirmacao_consultas
 
 # 2. Configure o .env
 cp env.example .env
-nano .env  # Configure suas chaves Botconversa
+nano .env  # Configure suas chaves Botconversa e Oracle
 
-# 3. Suba com PostgreSQL
-make postgresql-setup
+# 3. Suba com Oracle
+make oracle-setup
 
 # 4. Verifique status
 make status
@@ -315,7 +354,7 @@ python -m cli test-db
 python -m cli test-botconversa
 
 # 6. Acesse no navegador
-# http://localhost:8000
+# http://localhost:5001
 ```
 
 ---
@@ -354,7 +393,25 @@ venv\Scripts\activate     # Windows
 pip install -r requirements.txt
 ```
 
-### **2. Configuração do Banco:**
+### **2. Configuração Oracle (Local):**
+
+```bash
+# Baixe Oracle Instant Client
+wget https://download.oracle.com/otn_software/linux/instantclient/2113000/instantclient-basic-linux.x64-21.13.0.0.0.zip
+unzip instantclient-basic-linux.x64-21.13.0.0.0.zip
+sudo mv instantclient_21_13 /opt/oracle/
+
+# Configure variáveis de ambiente
+export ORACLE_HOME=/opt/oracle/instantclient_21_13
+export LD_LIBRARY_PATH=/opt/oracle/instantclient_21_13
+export PATH=/opt/oracle/instantclient_21_13:$PATH
+
+# Ou criar arquivo permanente
+sudo nano /etc/profile.d/oracle.sh
+# Adicionar as variáveis acima
+```
+
+### **3. Configuração do Banco:**
 
 ```bash
 # Configure as variáveis no .env
@@ -365,7 +422,7 @@ cp env.example .env
 python -m app.database.init_db
 ```
 
-### **3. Execução:**
+### **4. Execução:**
 
 ```bash
 # Inicie a aplicação
@@ -392,11 +449,10 @@ python -m cli test-conexao     # Testa API Botconversa
 # Gestão de atendimentos
 python -m cli atendimentos              # Lista todos os atendimentos
 python -m cli listar-atendimentos       # Lista atendimentos pendentes
-python -m cli buscar-atendimento        # Busca atendimento por telefone
-### **1. Criar Atendimento**
-```bash
+python -m cli buscar-atendimento       # Busca atendimento por telefone
+
+# Criar Atendimento
 python -m cli criar-atendimento --nome "João Silva" --telefone 5531999629004 --medico "Dr. Carlos" --especialidade "Cardiologia" --data "15/01/2025" --hora "14:00" --nr-seq-agenda 12345
-```
 
 # Operações Botconversa
 python -m cli adicionar-botconversa     # Adiciona subscriber no Botconversa
@@ -418,13 +474,15 @@ python -m cli help                      # Ajuda detalhada
 POST /webhook/botconversa
 ```
 
-### **Payload N8N Esperado:**
+### **Payload N8N Esperado (Atualizado):**
 
 ```json
 {
   "telefone": "5511999999999",
-  "subscriber_id": 123456,
-  "resposta": "1" // "1" = SIM, "0" = NÃO
+  "subscriber_id": "123456",
+  "resposta": "1", // "1" = SIM, "0" = NÃO
+  "id_tabela": "38", // ID do atendimento na tabela
+  "nr_seq_agenda": "51177197" // Número sequencial da agenda
 }
 ```
 
@@ -433,6 +491,7 @@ POST /webhook/botconversa
 1. Configure o webhook no N8N para enviar POST para sua URL
 2. Formate o payload conforme especificado acima
 3. A aplicação processará automaticamente as respostas
+4. **Identificação única** garantida pelos campos `id_tabela` e `nr_seq_agenda`
 
 ### **Testando o Webhook:**
 
@@ -443,7 +502,9 @@ Headers: Content-Type: application/json
 Body: {
   "telefone": "5591982636266",
   "subscriber_id": "791023626",
-  "resposta": "1"
+  "resposta": "1",
+  "id_tabela": "38",
+  "nr_seq_agenda": "51177197"
 }
 ```
 
@@ -454,7 +515,9 @@ curl -X POST http://101.44.2.109:5001/webhook/botconversa \
   -d '{
     "telefone": "5591982636266",
     "subscriber_id": "791023626",
-    "resposta": "1"
+    "resposta": "1",
+    "id_tabela": "38",
+    "nr_seq_agenda": "51177197"
   }'
 ```
 
@@ -467,11 +530,13 @@ curl -X POST http://101.44.2.109:5001/webhook/botconversa \
   "data": {
     "success": true,
     "message": "Atendimento CONFIRMADO com sucesso",
-    "atendimento_id": 2,
+    "atendimento_id": 38,
     "status": "CONFIRMADO",
     "telefone": "5591982636266",
     "subscriber_id": "791023626",
-    "resposta": "1"
+    "resposta": "1",
+    "id_tabela": "38",
+    "nr_seq_agenda": "51177197"
   }
 }
 ```
@@ -500,6 +565,14 @@ O sistema agora possui tratamento robusto de erros:
 - **Processamento de respostas** automatizado
 - **Atualização de status** no banco de dados
 - **Logs detalhados** para debugging
+- **Identificação única** de atendimentos
+
+### **✅ Integração Oracle:**
+
+- **Oracle Instant Client** integrado
+- **Variáveis de ambiente** configuradas
+- **Procedure Oracle** executada automaticamente
+- **Campos personalizados** funcionando
 
 ## ⏰ **Scheduler Automatizado**
 
@@ -507,7 +580,7 @@ O sistema executa automaticamente:
 
 - **Confirmações**: Diariamente às 9h (configurável)
 - **Lembretes**: Diariamente às 14h (configurável)
-- **Monitoramento**: A cada 30 minutos para novos atendimentos
+- **Monitoramento**: A cada 5 minutos para novos atendimentos (configurável)
 
 ### **Configuração dos Horários:**
 
@@ -516,6 +589,7 @@ SCHEDULER_CONFIRMATION_HOUR=9      # Hora das confirmações
 SCHEDULER_CONFIRMATION_MINUTE=0    # Minuto das confirmações
 SCHEDULER_REMINDER_HOUR=14         # Hora dos lembretes
 SCHEDULER_REMINDER_MINUTE=0        # Minuto dos lembretes
+scheduler_monitoring_interval_minutes=5  # Intervalo de monitoramento
 ```
 
 ## 📊 **Monitoramento**
@@ -539,8 +613,8 @@ SCHEDULER_REMINDER_MINUTE=0        # Minuto dos lembretes
 cp env.example .env
 # Edite com configurações de produção
 
-# Inicie com Nginx
-make prod
+# Inicie com Oracle
+make oracle-setup
 
 # Verifique status
 make status
@@ -562,6 +636,10 @@ WEBHOOK_URL=https://seudominio.com/webhook/botconversa
 # Ajuste workers
 MAX_WORKERS=4
 WORKER_TIMEOUT=30
+
+# Configure Oracle
+ORACLE_URL=oracle+cx_oracle://usuario:senha@host:porta/servico
+DATABASE_TYPE=oracle
 ```
 
 ### **3. Configuração de Firewall (Produção):**
@@ -580,7 +658,7 @@ iptables -L -n
 ## 📁 **Estrutura do Projeto**
 
 ```
-confirmacao_consultas/
+confirmacao_consulta/
 ├── app/                    # Aplicação principal
 │   ├── api/               # Endpoints da API
 │   │   └── routes/        # Rotas da API
@@ -626,7 +704,7 @@ curl http://localhost:5001/scheduler/status
 # Teste Webhook
 curl -X POST http://localhost:5001/webhook/botconversa \
   -H "Content-Type: application/json" \
-  -d '{"telefone": "5511999999999", "subscriber_id": "123", "resposta": "1"}'
+  -d '{"telefone": "5511999999999", "subscriber_id": "123", "resposta": "1", "id_tabela": "38", "nr_seq_agenda": "51177197"}'
 ```
 
 ## 📚 **Documentação Adicional**
@@ -641,10 +719,11 @@ curl -X POST http://localhost:5001/webhook/botconversa \
 
 ### **Problemas Comuns:**
 
-1. **Erro de conexão com banco:**
+1. **Erro de conexão com Oracle:**
 
-   - Verifique `DATABASE_TYPE` e URLs no `.env`
-   - Confirme se o banco Docker está rodando
+   - Verifique `ORACLE_URL` e `DATABASE_TYPE` no `.env`
+   - Confirme se o Oracle Instant Client está instalado
+   - Verifique variáveis de ambiente: `ORACLE_HOME`, `LD_LIBRARY_PATH`, `PATH`
    - Use `make status` para verificar serviços
 
 2. **Erro Botconversa:**
@@ -656,6 +735,7 @@ curl -X POST http://localhost:5001/webhook/botconversa \
 
    - Verifique `make status`
    - Confirme horários no `.env`
+   - Verifique `scheduler_monitoring_interval_minutes`
 
 4. **Erro Docker:**
 
@@ -673,6 +753,11 @@ curl -X POST http://localhost:5001/webhook/botconversa \
    - ✅ **RESOLVIDO** - Tratamento de exceções aprimorado
    - ✅ **RESOLVIDO** - Middleware protegido contra falhas
 
+7. **Oracle Instant Client:**
+   - ✅ **RESOLVIDO** - Dockerfile baixa automaticamente
+   - ✅ **RESOLVIDO** - Variáveis de ambiente configuradas
+   - ✅ **RESOLVIDO** - Sistema de ambiente permanente implementado
+
 ### **Logs e Debug:**
 
 ```bash
@@ -688,8 +773,6 @@ make status
 # Teste conectividade externa
 curl -v http://101.44.2.109:5001/health
 ```
-<<<<<<< HEAD
-=======
 
 ### **Verificação de Status:**
 
@@ -705,6 +788,11 @@ iptables -L -n
 
 # Teste de conectividade
 telnet 101.44.2.109 5001
+
+# Verificar Oracle Instant Client
+ls -la /opt/oracle/instantclient_21_13
+echo $ORACLE_HOME
+echo $LD_LIBRARY_PATH
 ```
 
 ## 🎯 **Status das Implementações**
@@ -719,6 +807,12 @@ telnet 101.44.2.109 5001
 - ✅ **Integração N8N** - Funcionando
 - ✅ **Sistema de logs** - Implementado
 - ✅ **Tratamento de erros** - Robusto
+- ✅ **Integração Oracle** - Completa
+- ✅ **Oracle Instant Client** - Configurado
+- ✅ **Campos personalizados** - id_tabela e nr_seq_agenda
+- ✅ **Procedure Oracle** - Integrada
+- ✅ **Scheduler configurável** - Implementado
+- ✅ **Identificação única** - Funcionando
 
 ### **🚀 PRÓXIMOS PASSOS:**
 
@@ -740,8 +834,10 @@ O sistema está completamente funcional e pronto para produção:
 - ✅ **Integração N8N operacional**
 - ✅ **Scheduler automatizado funcionando**
 - ✅ **CLI robusto para administração**
+- ✅ **Integração Oracle completa**
+- ✅ **Campos personalizados funcionando**
+- ✅ **Procedure Oracle executada**
+- ✅ **Identificação única de atendimentos**
 
 **🎉 Parabéns! O sistema está funcionando perfeitamente!**
 
-
->>>>>>> 7c32791d23d806347842836c4e2df5312dc9793b

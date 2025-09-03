@@ -263,6 +263,100 @@ class BotconversaService:
             logger.error(f"❌ Erro ao atualizar campo personalizado do subscriber {subscriber_id}: {str(e)}")
             return False
 
+    def adicionar_campo_id_tabela(self, subscriber_id: int, atendimento_id: int) -> bool:
+        """
+        Adiciona o ID da tabela (atendimento.id) ao campo personalizado do subscriber no Botconversa.
+
+        Args:
+            subscriber_id: ID do subscriber no Botconversa
+            atendimento_id: ID do atendimento na tabela
+
+        Returns:
+            True se campo foi atualizado com sucesso, False caso contrário
+        """
+        try:
+            valor = str(atendimento_id)
+            field_id = 4373358  # ID do campo personalizado id_tabela
+            
+            logger.info(f"Adicionando ID da tabela '{valor}' ao campo personalizado {field_id} do subscriber {subscriber_id}")
+            
+            # URL para atualizar campo personalizado do subscriber
+            url = f"{self.base_url}/subscriber/{subscriber_id}/custom_fields/{field_id}/"
+            
+            # Dados para atualizar o campo personalizado
+            field_data = {
+                "value": valor
+            }
+            
+            # Faz requisição POST para atualizar campo personalizado
+            response = requests.post(
+                url,
+                json=field_data,
+                headers=self.headers,
+                timeout=30,
+            )
+            
+            if response.status_code == 200 or response.status_code == 201:
+                logger.info(f"✅ Campo personalizado id_tabela ({field_id}) atualizado com sucesso para subscriber {subscriber_id} com valor '{valor}'")
+                return True
+            else:
+                logger.error(
+                    f"❌ Erro ao atualizar campo personalizado id_tabela ({field_id}) do subscriber {subscriber_id}: "
+                    f"{response.status_code} - {response.text}"
+                )
+                return False
+                
+        except Exception as e:
+            logger.error(f"❌ Erro ao atualizar campo personalizado id_tabela do subscriber {subscriber_id}: {str(e)}")
+            return False
+
+    def adicionar_campo_nr_seq_agenda(self, subscriber_id: int, nr_seq_agenda: int) -> bool:
+        """
+        Adiciona o nr_seq_agenda ao campo personalizado do subscriber no Botconversa.
+
+        Args:
+            subscriber_id: ID do subscriber no Botconversa
+            nr_seq_agenda: Número sequencial da agenda
+
+        Returns:
+            True se campo foi atualizado com sucesso, False caso contrário
+        """
+        try:
+            valor = str(nr_seq_agenda)
+            field_id = 4373360  # ID do campo personalizado nr_seq_agenda
+            
+            logger.info(f"Adicionando nr_seq_agenda '{valor}' ao campo personalizado {field_id} do subscriber {subscriber_id}")
+            
+            # URL para atualizar campo personalizado do subscriber
+            url = f"{self.base_url}/subscriber/{subscriber_id}/custom_fields/{field_id}/"
+            
+            # Dados para atualizar o campo personalizado
+            field_data = {
+                "value": valor
+            }
+            
+            # Faz requisição POST para atualizar campo personalizado
+            response = requests.post(
+                url,
+                json=field_data,
+                headers=self.headers,
+                timeout=30,
+            )
+            
+            if response.status_code == 200 or response.status_code == 201:
+                logger.info(f"✅ Campo personalizado nr_seq_agenda ({field_id}) atualizado com sucesso para subscriber {subscriber_id} com valor '{valor}'")
+                return True
+            else:
+                logger.error(
+                    f"❌ Erro ao atualizar campo personalizado nr_seq_agenda ({field_id}) do subscriber {subscriber_id}: "
+                    f"{response.status_code} - {response.text}"
+                )
+                return False
+                
+        except Exception as e:
+            logger.error(f"❌ Erro ao atualizar campo personalizado nr_seq_agenda do subscriber {subscriber_id}: {str(e)}")
+            return False
+
     def criar_atendimento(self, dados: Dict[str, Any]) -> Optional[Atendimento]:
         """
         Cria um novo atendimento e registra no Botconversa.
