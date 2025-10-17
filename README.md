@@ -1,6 +1,150 @@
-# 🏥 Sistema de Confirmação de Consultas - Santa Casa
+# 🏥 Sistema de Confirmação de Consultas
 
-Sistema automatizado para confirmação de consultas médicas via WhatsApp, integrado com Botconversa API, N8N e Oracle Database para automação completa.
+Sistema automatizado para confirmação de consultas médicas via WhatsApp, integrado com Botconversa API e N8N para automação completa.
+
+## 🎯 **INSTALAÇÃO EM UM CLIQUE**
+
+**✅ Funciona em qualquer servidor com Docker!**
+
+```bash
+# Linux/macOS
+git clone <seu-repositorio>
+cd confirmacao_consultas
+./install.sh
+
+# Windows
+git clone <seu-repositorio>
+cd confirmacao_consultas
+install.bat
+```
+
+**🚀 O script faz tudo automaticamente:**
+- ✅ Detecta seu sistema operacional
+- ✅ Verifica e instala dependências
+- ✅ Configura ambiente (.env)
+- ✅ Escolhe banco de dados (Oracle/PostgreSQL/Firebird)
+- ✅ Instala e inicia aplicação
+- ✅ Verifica se está funcionando
+
+## 📋 **PRÉ-REQUISITOS**
+
+- ✅ **Docker** instalado e rodando
+- ✅ **Docker Compose** disponível
+- ✅ **Git** instalado
+- ✅ **Conta Botconversa** com API Key
+
+## 🔧 **CONFIGURAÇÃO PÓS-INSTALAÇÃO**
+
+Após a instalação automática, configure:
+
+1. **🔑 API Key do BotConversa** no arquivo `.env`
+2. **🌐 URL do Webhook** com o endereço do seu servidor
+3. **🏥 Dados do Hospital** (nome, endereço, telefone)
+
+```bash
+# Editar configurações
+nano .env
+
+# Reiniciar aplicação
+docker-compose restart
+```
+
+---
+
+## 🐳 **INSTALAÇÃO MANUAL (AVANÇADA)**
+
+Para usuários avançados que preferem controle total:
+
+```bash
+# 1. Clone o repositório
+git clone <seu-repositorio>
+cd confirmacao_consultas
+
+# 2. Configure o .env
+cp .env.backup .env
+# Edite o .env com suas configurações
+
+# 3. Escolha o banco de dados
+make postgresql-setup  # PostgreSQL
+make oracle-setup      # Oracle
+make firebird-setup    # Firebird
+
+# 4. Acesse: http://localhost:5001
+```
+
+## 🎯 **COMO FUNCIONA A INSTALAÇÃO AUTOMÁTICA**
+
+### **🔧 install.sh (Linux/macOS)**
+- ✅ **Detecção automática** de sistema operacional
+- ✅ **Verificação de dependências** (Docker, Docker Compose, Git, curl)
+- ✅ **Inicialização automática** do Docker
+- ✅ **Configuração inteligente** do arquivo `.env`
+- ✅ **Escolha interativa** do banco de dados
+- ✅ **Verificação de saúde** da aplicação
+- ✅ **Interface colorida** com emojis e cores
+
+### **🔧 install.bat (Windows)**
+- ✅ **Compatibilidade Windows** 10/11
+- ✅ **Verificação de dependências** (Docker Desktop, Docker Compose, Git)
+- ✅ **Inicialização automática** do Docker Desktop
+- ✅ **Configuração inteligente** do arquivo `.env`
+- ✅ **Escolha interativa** do banco de dados
+- ✅ **Verificação de saúde** da aplicação
+- ✅ **Interface amigável** com pausas para leitura
+
+### **🛡️ SEGURANÇA**
+- ✅ **Não executam como root/admin**
+- ✅ **Verificação de dependências** antes da instalação
+- ✅ **Isolamento Docker** (não afetam containers existentes)
+- ✅ **Backup automático** de configurações
+- ✅ **Idempotência** (podem ser executados múltiplas vezes)
+
+## 🚀 **USANDO O SISTEMA APÓS INSTALAÇÃO**
+
+### **📱 Acessar a Aplicação**
+```bash
+# Aplicação web
+http://localhost:5001
+
+# Verificar status
+docker-compose ps
+
+# Ver logs
+docker-compose logs -f
+```
+
+### **🔧 Comandos Úteis**
+```bash
+# Parar sistema
+docker-compose down
+
+# Reiniciar sistema
+docker-compose restart
+
+# Limpar tudo (cuidado!)
+docker-compose down -v
+```
+
+### **📊 CLI da Aplicação**
+```bash
+# Acessar CLI
+docker-compose exec app python -m cli
+
+# Criar atendimento
+docker-compose exec app python -m cli criar-atendimento \
+  --nome "João Silva" \
+  --telefone "5531999999999" \
+  --medico "Dr. Carlos" \
+  --especialidade "Cardiologia" \
+  --data "25/12/2024" \
+  --hora "14:00" \
+  --nr-seq-agenda 12345
+
+# Testar conexão
+docker-compose exec app python -m cli test-conexao
+```
+
+---
 
 ## 🚀 **Funcionalidades Principais**
 
@@ -840,4 +984,29 @@ O sistema está completamente funcional e pronto para produção:
 - ✅ **Identificação única de atendimentos**
 
 **🎉 Parabéns! O sistema está funcionando perfeitamente!**
+
+---
+
+## 🎯 **INFORMAÇÕES IMPORTANTES**
+
+### **✅ SISTEMA PRONTO PARA PRODUÇÃO**
+- ✅ **Instalação automática** em qualquer servidor
+- ✅ **Configuração via variáveis de ambiente** (.env)
+- ✅ **Suporte a múltiplos bancos** (Oracle, PostgreSQL, Firebird)
+- ✅ **Isolamento Docker** completo
+- ✅ **Scripts de instalação** para Linux, macOS e Windows
+- ✅ **Documentação completa** e troubleshooting
+
+### **🔧 CONFIGURAÇÃO MÍNIMA**
+1. **Clone o repositório**
+2. **Execute o script de instalação** (`./install.sh` ou `install.bat`)
+3. **Configure sua API Key** do BotConversa no `.env`
+4. **Configure a URL do webhook** com seu servidor
+5. **Pronto!** Sistema funcionando em `http://localhost:5001`
+
+### **📞 SUPORTE**
+- 📚 **Documentação completa** neste README
+- 🔧 **Troubleshooting** detalhado na seção de suporte
+- 🐛 **Logs** disponíveis via `docker-compose logs`
+- 🆘 **CLI** para testes e diagnóstico
 
