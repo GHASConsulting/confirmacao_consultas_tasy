@@ -8,12 +8,12 @@ Sistema automatizado para confirmação de consultas médicas via WhatsApp, inte
 
 ```bash
 # Linux/macOS
-git clone <seu-repositorio>
+git clone https://github.com/GHASConsulting/confirmacao_consultas_tasy.git
 cd confirmacao_consultas
 ./install.sh
 
 # Windows
-git clone <seu-repositorio>
+git clone https://github.com/GHASConsulting/confirmacao_consultas_tasy.git
 cd confirmacao_consultas
 install.bat
 ```
