@@ -61,8 +61,8 @@ WORKDIR /app
 COPY --chown=app:app app/ ./app/
 COPY --chown=app:app cli/ ./cli/
 
-# Criar diretório de logs
-RUN mkdir -p logs && chown app:app logs
+# Criar diretórios de logs e dados (SQLite)
+RUN mkdir -p logs data && chown -R app:app logs data
 
 # Mudar para usuário não-root
 USER app

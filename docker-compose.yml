@@ -43,6 +43,13 @@ services:
       WEBHOOK_PORT: ${WEBHOOK_PORT}
       WEBHOOK_URL: ${WEBHOOK_URL}
 
+      # View + SQLite (lembretes 48h/12h)
+      SQLITE_URL: ${SQLITE_URL:-sqlite:///./data/envios_lembrete.db}
+      VIEW_CONFIRMACAO_NOME: ${VIEW_CONFIRMACAO_NOME:-TASY.AVA_CONFIRMACAO_CONSULTA}
+      TABELA_AGENDA_CONSULTA: ${TABELA_AGENDA_CONSULTA:-TASY.AGENDA_CONSULTA}
+      VIEW_POLL_INTERVAL_MINUTES: ${VIEW_POLL_INTERVAL_MINUTES:-5}
+      CREATE_APP_TABLES: ${CREATE_APP_TABLES:-true}
+
     healthcheck:
       interval: 30s
       retries: 3
@@ -62,6 +69,7 @@ services:
 
     volumes:
       - ./logs:/app/logs:rw
+      - ./data:/app/data:rw
 
   # Banco Oracle (opcional - para desenvolvimento local)
   db-oracle:

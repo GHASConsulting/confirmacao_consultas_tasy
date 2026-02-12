@@ -5,17 +5,37 @@ Este módulo contém os endpoints para receber e processar webhooks
 enviados pelo Botconversa quando pacientes respondem às mensagens.
 """
 
+import hmac
+import json
 from typing import Any, Dict
 
 from fastapi import APIRouter, Depends, HTTPException, Request
 from loguru import logger
 from sqlalchemy.orm import Session
 
+from app.config.config import settings
 from app.database.manager import get_db
 from app.schemas.schemas import BotconversaWebhook
 from app.services.webhook_service import WebhookService
 
 router = APIRouter(prefix="/webhook", tags=["webhook"])
+
+
+def _validar_assinatura_webhook(body: bytes, signature_recebida: str, secret: str) -> bool:
+    """Valida assinatura HMAC-SHA256 do body. Retorna True se válida."""
+    try:
+        esperado = hmac.new(
+            secret.encode("utf-8"),
+            body,
+            "sha256",
+        ).hexdigest().lower()
+        # Pode vir com prefixo tipo "sha256=..." ou "v1=..."
+        recebido = signature_recebida.strip().lower()
+        if "=" in recebido:
+            recebido = recebido.split("=", 1)[-1].strip()
+        return hmac.compare_digest(esperado, recebido)
+    except Exception:
+        return False
 
 
 @router.post("/botconversa")
@@ -30,10 +50,29 @@ async def botconversa_webhook(
     """
     try:
         logger.info("=== INÍCIO DO PROCESSAMENTO DO WEBHOOK ===")
-        
-        # Lê o corpo da requisição
-        logger.info("Lendo corpo da requisição...")
-        webhook_data = await request.json()
+
+        # Lê o corpo bruto (necessário para validar assinatura e depois parsear JSON)
+        body = await request.body()
+        secret = getattr(settings, "botconversa_webhook_secret", None) or ""
+        header_name = getattr(settings, "webhook_signature_header", "X-Webhook-Signature")
+        signature_recebida = request.headers.get(header_name) or request.headers.get("X-Webhook-Signature") or ""
+
+        # Validação opcional: só valida se o secret estiver configurado E o header de assinatura tiver vindo
+        if secret and signature_recebida:
+            if not _validar_assinatura_webhook(body, signature_recebida, secret):
+                logger.warning("Webhook rejeitado: assinatura inválida")
+                raise HTTPException(status_code=401, detail="Assinatura do webhook inválida")
+            logger.info("Assinatura do webhook validada com sucesso")
+        # Se secret não está setado ou não veio assinatura, segue normal (não quebra N8N nem fluxo atual)
+
+        if not body:
+            webhook_data = {}
+        else:
+            try:
+                webhook_data = json.loads(body.decode("utf-8"))
+            except json.JSONDecodeError as e:
+                logger.error(f"Webhook com body JSON inválido: {e}")
+                raise HTTPException(status_code=400, detail="Body JSON inválido")
         logger.info(f"Webhook recebido: {webhook_data}")
 
         # Cria instância do serviço

@@ -76,6 +76,8 @@ class Settings(BaseSettings):
     webhook_host: str = "0.0.0.0"  # Host para aceitar conexões externas
     webhook_port: int = 5001  # Porta do servidor webhook
     webhook_url: Optional[str] = None  # URL pública do webhook
+    # Header com assinatura do webhook (opcional). Se BOTCONVERSA_WEBHOOK_SECRET estiver setado e o header vier na requisição, validamos.
+    webhook_signature_header: str = "X-Webhook-Signature"
 
     # Scheduler Configuration
     reminder_interval: int = 24

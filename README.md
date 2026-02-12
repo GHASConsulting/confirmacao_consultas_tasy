@@ -794,6 +794,17 @@ scheduler_monitoring_interval_minutes=5  # Intervalo de monitoramento
 
 ## 🚀 **Deploy em Produção**
 
+### **Checklist antes de colocar em produção**
+
+- [ ] **DEBUG=false** no `.env`
+- [ ] **ORACLE_URL** com conexão real do ambiente (não deixar placeholder)
+- [ ] **WEBHOOK_URL** com a URL pública real (ex.: `https://api.seudominio.com/webhook/botconversa`)
+- [ ] **BOTCONVERSA_API_KEY** e **BOTCONVERSA_WEBHOOK_SECRET** com valores de produção (nunca commitar no Git)
+- [ ] **CREATE_APP_TABLES** = `False` se o banco tiver só a view e a tabela TASY (não criar atendimentos, etc.)
+- [ ] Aplicação atrás de **HTTPS** (Nginx, proxy reverso ou load balancer)
+- [ ] Volume **./data** persistente (Docker) para o SQLite dos envios 48h/12h não se perder ao reiniciar
+- [ ] Backup periódico do arquivo **data/envios_lembrete.db** (opcional, para auditoria)
+
 ### **1. Com Docker (Recomendado):**
 
 ```bash
@@ -828,6 +839,9 @@ WORKER_TIMEOUT=30
 # Configure Oracle
 ORACLE_URL=oracle+cx_oracle://usuario:senha@host:porta/servico
 DATABASE_TYPE=oracle
+
+# Se o banco só tiver view + agenda_consulta (TASY)
+CREATE_APP_TABLES=false
 ```
 
 ### **3. Configuração de Firewall (Produção):**
