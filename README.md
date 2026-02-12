@@ -14,7 +14,7 @@ Sistema automatizado para confirmação de consultas médicas via WhatsApp, inte
 ## 🛠️ **Tecnologias**
 
 - **Backend**: FastAPI + Python 3.11
-- **Banco**: Suporte a Oracle, PostgreSQL e Firebird
+- **Banco principal**: Oracle (view TASY + agenda_consulta). Suporte também a PostgreSQL e Firebird
 - **ORM**: SQLAlchemy
 - **Scheduler**: APScheduler
 - **CLI**: Click + Rich
@@ -66,9 +66,11 @@ nano .env  # ou use seu editor preferido
 
 ```bash
 # ========================================
-# ESCOLHA DO BANCO DE DADOS
+# BANCO PRINCIPAL (Oracle - view TASY + agenda_consulta)
 # ========================================
-DOCKER_DATABASE_TYPE=postgresql  # oracle, postgresql, firebird
+DATABASE_TYPE=oracle
+DOCKER_DATABASE_TYPE=oracle
+ORACLE_URL=oracle+cx_oracle://usuario:senha@host:1521/service_name
 
 # ========================================
 # CONFIGURAÇÕES BOTCONVERSA (OBRIGATÓRIAS)
@@ -87,18 +89,18 @@ HOSPITAL_CITY=Belo Horizonte
 HOSPITAL_STATE=MG
 ```
 
-### **3️⃣ ESCOLHER E SUBIR O BANCO DE DADOS**
+### **3️⃣ SUBIR O BANCO (ORACLE É O PADRÃO)**
 
-**🎯 OPÇÃO A: PostgreSQL (Recomendado para começar)**
-
-```bash
-make postgresql-setup
-```
-
-**🎯 OPÇÃO B: Oracle**
+**🎯 OPÇÃO A: Oracle (recomendado – banco principal da aplicação)**
 
 ```bash
 make oracle-setup
+```
+
+**🎯 OPÇÃO B: PostgreSQL**
+
+```bash
+make postgresql-setup
 ```
 
 **🎯 OPÇÃO C: Firebird**
@@ -149,17 +151,17 @@ make status                  # Status de todos os serviços
 ### **🗄️ SETUP ESPECÍFICO POR BANCO**
 
 ```bash
+make oracle-setup            # Inicia com Oracle (padrão)
 make postgresql-setup        # Inicia com PostgreSQL
-make oracle-setup            # Inicia com Oracle
 make firebird-setup          # Inicia com Firebird
-make dev                     # Setup padrão (PostgreSQL)
+make dev                     # Setup padrão (Oracle)
 ```
 
 ### **💾 BANCO DE DADOS**
 
 ```bash
-make db-shell-postgresql     # Acessa shell PostgreSQL
 make db-shell-oracle         # Acessa shell Oracle
+make db-shell-postgresql     # Acessa shell PostgreSQL
 make db-shell-firebird       # Acessa shell Firebird
 make db-reset                # Reseta banco de dados
 ```
@@ -206,7 +208,7 @@ make status
 make logs app
 
 # Ver logs do banco
-make logs db-postgresql  # ou db-oracle, db-firebird
+make logs db-oracle  # ou db-postgresql, db-firebird
 ```
 
 ---
@@ -218,11 +220,11 @@ make logs db-postgresql  # ou db-oracle, db-firebird
 ```bash
 # Verificar portas em uso
 netstat -tulpn | grep :8000
-netstat -tulpn | grep :5432
+netstat -tulpn | grep :1521
 
 # Solução: Mude portas no .env
 APP_PORT=8001
-POSTGRESQL_DOCKER_PORT=5433
+ORACLE_DOCKER_PORT=1522
 ```
 
 ### **🚫 Erro: Docker não tem permissão**
@@ -239,7 +241,7 @@ sudo usermod -aG docker $USER
 # Limpar tudo e recomeçar
 make clean                   # Remove tudo
 make build                   # Reconstrói imagens
-make postgresql-setup        # Inicia novamente
+make oracle-setup            # Inicia novamente
 ```
 
 ### **🚫 Erro: Banco não conecta**
@@ -249,10 +251,10 @@ make postgresql-setup        # Inicia novamente
 make status
 
 # Ver logs do banco
-make logs db-postgresql
+make logs db-oracle
 
 # Reiniciar apenas o banco
-make restart db-postgresql
+make restart db-oracle
 ```
 
 ---
@@ -268,8 +270,8 @@ cd confirmacao_consultas
 cp env.example .env
 nano .env  # Configure suas chaves Botconversa
 
-# 3. Suba com PostgreSQL
-make postgresql-setup
+# 3. Suba com Oracle
+make oracle-setup
 
 # 4. Verifique status
 make status
@@ -466,14 +468,13 @@ confirmacao_consultas/
 ├── logs/                  # Logs da aplicação
 ├── Dockerfile             # Imagem Docker
 ├── docker-compose.yml     # Orquestração Docker (múltiplos bancos)
-├── init-*.sql             # Scripts de inicialização dos bancos
 ├── Makefile               # Automação de comandos
 ├── requirements.txt       # Dependências Python
 ├── .env                   # Variáveis de ambiente
 ├── install.sh             # 🚀 Script de instalação Linux/Mac
 ├── install.bat            # 🚀 Script de instalação Windows
 ├── setup-docker.sh        # ⚡ Setup rápido Docker
-└── README-INSTALACAO.md   # 📖 Guia completo de instalação
+└── README.md              # Este guia
 ```
 
 ## 🔍 **Testes e Validação**
@@ -500,15 +501,6 @@ curl http://localhost:8000/health
 curl http://localhost:8000/scheduler/status
 ```
 
-## 📚 **Documentação Adicional**
-
-- 📖 [Guia de Desenvolvimento](docs/development_guide.md)
-- 🔧 [Documentação Técnica](docs/TECHNICAL.md)
-- 🔄 [Fluxo Botconversa](docs/fluxo_botconversa_consultas.md)
-- 🌐 [Guia Webhook N8N](docs/webhook_n8n_guide.md)
-- ✅ [Implementações Completadas](IMPLEMENTACOES_COMPLETADAS.md)
-- 🚀 **[Guia de Instalação Completo](README-INSTALACAO.md)** ⭐ **NOVO!**
-
 ## 🆘 **Suporte e Troubleshooting**
 
 ### **Problemas Comuns:**
@@ -533,7 +525,7 @@ curl http://localhost:8000/scheduler/status
 
    - Use `make clean` para limpar tudo
    - Verifique portas disponíveis
-   - Confirme `DOCKER_DATABASE_TYPE` no `.env`
+   - Confirme `DOCKER_DATABASE_TYPE=oracle` no `.env`
 
 ### **Logs e Debug:**
 
@@ -547,8 +539,3 @@ make shell
 # Verifique status dos serviços
 make status
 ```
-<<<<<<< HEAD
-=======
-
-
->>>>>>> 7c32791d23d806347842836c4e2df5312dc9793b

@@ -3,7 +3,7 @@ Serviço para processar webhooks do Botconversa.
 
 Este serviço gerencia:
 - Recebimento de webhooks
-- Processamento de respostas dos pacientes
+- Processamento de respostas dos pacientes (incl. UPDATE em agenda_consulta por nr_sequencia)
 - Validação de dados
 - Logging de eventos
 """
@@ -20,6 +20,12 @@ from app.database.models import (
     Consulta,
     Paciente,
     StatusConfirmacao,
+)
+from app.database.sqlite_envios import get_sqlite_session
+from app.services.agenda_consulta_update_service import atualizar_confirmacao_agenda_consulta
+from app.services.envios_lembrete_service import (
+    buscar_ultimo_envio_sem_resposta_por_telefone,
+    registrar_resposta_envio,
 )
 
 from .botconversa_service import BotconversaService
@@ -243,18 +249,18 @@ class WebhookService:
         """
         Processa dados recebidos do N8N com respostas dos pacientes.
 
-        Args:
-            n8n_data: Dados do N8N com telefone, subscriber_id e resposta
-
-        Returns:
-            Resultado do processamento
+        Aceita nr_sequencia no payload; se não vier, tenta obter do SQLite
+        (último envio 48h/12h para aquele telefone sem resposta).
+        Atualiza a tabela agenda_consulta (DT_CONFIRMACAO, DS_CONFIRMACAO)
+        e registra a resposta no SQLite.
         """
         try:
-            # Extrai dados do N8N
             telefone = n8n_data.get("telefone")
             subscriber_id = n8n_data.get("subscriber_id")
             resposta = n8n_data.get("resposta")
             nome_paciente = n8n_data.get("nome_paciente")
+            nr_sequencia = n8n_data.get("nr_sequencia")  # opcional
+            nr_sequencia_agenda = n8n_data.get("nr_sequencia_agenda")  # opcional; cd_agenda para UPDATE
 
             if not telefone or not subscriber_id or not resposta:
                 return {
@@ -262,57 +268,94 @@ class WebhookService:
                     "error": "Telefone, subscriber_id ou resposta ausentes",
                 }
 
+            if resposta not in ("1", "0"):
+                return {
+                    "success": False,
+                    "error": "Resposta inválida. Esperado '1' (sim) ou '0' (não)",
+                }
+
+            confirmado = resposta == "1"
+            mensagem_status = "CONFIRMADO" if confirmado else "CANCELADO"
+
             logger.info(
-                f"Processando resposta N8N: {telefone} - {subscriber_id} - {resposta}"
+                f"Processando resposta N8N: telefone={telefone}, nr_sequencia={nr_sequencia}, "
+                f"nr_sequencia_agenda={nr_sequencia_agenda}, resposta={resposta}"
             )
 
-            # Busca atendimento por subscriber_id
+            # Obter nr_sequencia e cd_agenda: do payload ou do SQLite (último envio sem resposta)
+            cd_agenda = nr_sequencia_agenda  # payload pode trazer nr_sequencia_agenda
+            if nr_sequencia is None or cd_agenda is None:
+                sqlite_session = get_sqlite_session()
+                try:
+                    envio = buscar_ultimo_envio_sem_resposta_por_telefone(
+                        sqlite_session, telefone
+                    )
+                    if envio:
+                        if nr_sequencia is None:
+                            nr_sequencia = envio.nr_sequencia
+                            logger.info(f"nr_sequencia obtido do SQLite: {nr_sequencia}")
+                        if cd_agenda is None and getattr(envio, "cd_agenda", None) is not None:
+                            cd_agenda = envio.cd_agenda
+                            logger.info(f"cd_agenda (nr_sequencia_agenda) obtido do SQLite: {cd_agenda}")
+                finally:
+                    sqlite_session.close()
+
+            # Atualizar agenda_consulta no banco principal (por cd_agenda para não alterar agenda errada)
+            if cd_agenda is not None:
+                atualizar_confirmacao_agenda_consulta(
+                    self.db, cd_agenda, confirmado
+                )
+            else:
+                logger.warning(
+                    "nr_sequencia_agenda/cd_agenda ausente no payload e no SQLite; "
+                    "agenda_consulta não atualizada (evitar alterar agenda errada)"
+                )
+
+            # Registrar resposta no SQLite (por nr_sequencia), quando tivermos nr_sequencia
+            if nr_sequencia is not None:
+                sqlite_session = get_sqlite_session()
+                try:
+                    registrar_resposta_envio(sqlite_session, nr_sequencia, resposta)
+                finally:
+                    sqlite_session.close()
+
+            # Sucesso se atualizamos a agenda (cd_agenda) e/ou registramos resposta (nr_sequencia)
+            if cd_agenda is not None or nr_sequencia is not None:
+                return {
+                    "success": True,
+                    "message": f"Confirmação registrada: {mensagem_status}",
+                    "nr_sequencia": nr_sequencia,
+                    "nr_sequencia_agenda": cd_agenda,
+                    "status": mensagem_status,
+                    "telefone": telefone,
+                    "subscriber_id": subscriber_id,
+                    "resposta": resposta,
+                }
+
+            # Fallback: fluxo antigo por subscriber_id (tabela Atendimento)
             atendimento = (
                 self.db.query(Atendimento)
                 .filter(Atendimento.subscriber_id == subscriber_id)
                 .first()
             )
-
             if not atendimento:
-                logger.warning(
-                    f"Atendimento não encontrado para subscriber_id: {subscriber_id}"
-                )
                 return {
                     "success": False,
-                    "error": f"Atendimento não encontrado para subscriber_id: {subscriber_id}",
+                    "error": "Nenhum nr_sequencia (payload ou SQLite) e atendimento não encontrado para subscriber_id",
                 }
 
-            # Processa a resposta
-            if resposta == "1":
-                # Confirmação
-                atendimento.status_confirmacao = StatusConfirmacao.CONFIRMADO
-                mensagem_status = "CONFIRMADO"
-            elif resposta == "0":
-                # Cancelamento
-                atendimento.status_confirmacao = StatusConfirmacao.CANCELADO
-                mensagem_status = "CANCELADO"
+            if confirmado:
+                atendimento.status = StatusConfirmacao.CONFIRMADO
             else:
-                logger.warning(f"Resposta inválida: {resposta}")
-                return {
-                    "success": False,
-                    "error": f"Resposta inválida: {resposta}. Esperado '1' ou '0'",
-                }
-
-            # Atualiza campos de controle
+                atendimento.status = StatusConfirmacao.CANCELADO
             atendimento.respondido_em = datetime.now()
             atendimento.resposta_paciente = resposta
             atendimento.atualizado_em = datetime.now()
-
-            # Salva no banco
             self.db.commit()
-
-            logger.info(
-                f"Atendimento {atendimento.id} atualizado para {mensagem_status}"
-            )
 
             return {
                 "success": True,
-                "message": f"Atendimento {mensagem_status} com sucesso",
+                "message": f"Atendimento {mensagem_status} (fluxo legado)",
                 "atendimento_id": atendimento.id,
                 "status": mensagem_status,
                 "telefone": telefone,
@@ -322,6 +365,5 @@ class WebhookService:
 
         except Exception as e:
             logger.error(f"Erro ao processar webhook N8N: {str(e)}")
-            # Rollback em caso de erro
             self.db.rollback()
             return {"success": False, "error": str(e)}

@@ -36,8 +36,8 @@ show_help() {
     echo "Uso: $0 [OPÇÃO]"
     echo ""
     echo "Opções:"
-    echo "  postgresql    Inicia com PostgreSQL (padrão)"
-    echo "  oracle        Inicia com Oracle"
+    echo "  oracle        Inicia com Oracle (padrão - banco principal)"
+    echo "  postgresql    Inicia com PostgreSQL"
     echo "  firebird      Inicia com Firebird"
     echo "  clean         Limpa tudo e reconstrói"
     echo "  status        Mostra status dos serviços"
@@ -45,9 +45,9 @@ show_help() {
     echo "  help          Mostra esta ajuda"
     echo ""
     echo "Exemplos:"
-    echo "  $0                    # Inicia com PostgreSQL"
-    echo "  $0 oracle            # Inicia com Oracle"
-    echo "  $0 clean             # Limpa tudo e reconstrói"
+    echo "  $0                # Inicia com Oracle"
+    echo "  $0 postgresql     # Inicia com PostgreSQL"
+    echo "  $0 clean          # Limpa tudo e reconstrói"
 }
 
 # Função para verificar Docker
@@ -184,24 +184,24 @@ test_app() {
 main() {
     # Verificar argumentos
     if [ $# -eq 0 ]; then
-        # Sem argumentos, usar PostgreSQL como padrão
+        # Sem argumentos, usar Oracle como padrão (banco principal da aplicação)
         check_docker
-        setup_postgresql
+        setup_oracle
         test_app
         show_status
         return 0
     fi
     
     case "$1" in
-        postgresql)
-            check_docker
-            setup_postgresql
-            test_app
-            show_status
-            ;;
         oracle)
             check_docker
             setup_oracle
+            test_app
+            show_status
+            ;;
+        postgresql)
+            check_docker
+            setup_postgresql
             test_app
             show_status
             ;;

@@ -14,7 +14,7 @@ build: ## Constrói as imagens Docker
 	$(DOCKER_COMPOSE) build
 
 up: ## Inicia os serviços (usa o banco configurado no .env)
-	$(DOCKER_COMPOSE) --profile $(DOCKER_DATABASE_TYPE:-postgresql) up -d
+	$(DOCKER_COMPOSE) --profile $(DOCKER_DATABASE_TYPE:-oracle) up -d
 
 down: ## Para os serviços
 	$(DOCKER_COMPOSE) down
@@ -38,12 +38,12 @@ dev-firebird: ## Setup completo com Firebird
 	$(DOCKER_COMPOSE) --profile firebird up -d
 	@echo "✅ Serviços Firebird iniciados! Acesse http://localhost:8000"
 
-dev: dev-postgresql ## Setup padrão com PostgreSQL
+dev: dev-oracle ## Setup padrão com Oracle
 
 dev-build: ## Rebuild e reinicia serviços
 	$(DOCKER_COMPOSE) down
 	$(DOCKER_COMPOSE) build --no-cache
-	$(DOCKER_COMPOSE) --profile $(DOCKER_DATABASE_TYPE:-postgresql) up -d
+	$(DOCKER_COMPOSE) --profile $(DOCKER_DATABASE_TYPE:-oracle) up -d
 
 # Banco de dados
 db-shell-oracle: ## Acessa shell do Oracle
@@ -55,11 +55,11 @@ db-shell-postgresql: ## Acessa shell do PostgreSQL
 db-shell-firebird: ## Acessa shell do Firebird
 	$(DOCKER_COMPOSE) exec db-firebird isql -u $(FIREBIRD_DOCKER_USER:-SYSDBA) -p $(FIREBIRD_DOCKER_PASSWORD:-masterkey) localhost:$(FIREBIRD_DOCKER_PORT:-3050)/$(FIREBIRD_DOCKER_DB:-hospital_db)
 
-db-shell: db-shell-postgresql ## Shell padrão (PostgreSQL)
+db-shell: db-shell-oracle ## Shell padrão (Oracle)
 
 db-reset: ## Reseta banco de dados
 	$(DOCKER_COMPOSE) down -v
-	$(DOCKER_COMPOSE) --profile $(DOCKER_DATABASE_TYPE:-postgresql) up -d
+	$(DOCKER_COMPOSE) --profile $(DOCKER_DATABASE_TYPE:-oracle) up -d
 	@echo "⏳ Aguardando banco inicializar..."
 	@sleep 15
 	$(DOCKER_COMPOSE) up -d app
@@ -88,7 +88,7 @@ clean-logs: ## Limpa logs locais
 
 # Produção
 prod: ## Inicia serviços de produção (com Nginx)
-	$(DOCKER_COMPOSE) --profile production --profile $(DOCKER_DATABASE_TYPE:-postgresql) up -d
+	$(DOCKER_COMPOSE) --profile production --profile $(DOCKER_DATABASE_TYPE:-oracle) up -d
 
 prod-down: ## Para serviços de produção
 	$(DOCKER_COMPOSE) --profile production down
@@ -104,7 +104,7 @@ shell: ## Acessa shell do container da aplicação
 dev-setup: dev ## Setup completo para desenvolvimento
 	@echo "✅ Setup de desenvolvimento concluído!"
 	@echo "📱 Aplicação: http://localhost:8000"
-	@echo "🗄️  Banco: $(DOCKER_DATABASE_TYPE:-postgresql)"
+	@echo "🗄️  Banco: $(DOCKER_DATABASE_TYPE:-oracle)"
 	@echo "📊 Status: make status"
 	@echo "📝 Logs: make logs"
 

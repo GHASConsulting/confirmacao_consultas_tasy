@@ -91,6 +91,21 @@ class Settings(BaseSettings):
     scheduler_enable_confirmation_job: bool = True  # Habilitar job de confirmação
     scheduler_enable_reminder_job: bool = True  # Habilitar job de lembretes
 
+    # SQLite (controle "já enviado" para lembretes 48h/12h)
+    sqlite_url: str = "sqlite:///./data/envios_lembrete.db"
+
+    # View de confirmação (banco principal - Oracle)
+    view_confirmacao_nome: str = "TASY.AVA_CONFIRMACAO_CONSULTA"
+
+    # Tabela agenda_consulta no banco principal (para UPDATE de confirmação)
+    tabela_agenda_consulta: str = "TASY.AGENDA_CONSULTA"
+
+    # Intervalo (minutos) para consultar a view e processar lembretes 48h/12h
+    view_poll_interval_minutes: int = 5
+
+    # Se False, não cria tabelas da app (atendimentos, etc.) no startup - uso apenas view + agenda_consulta
+    create_app_tables: bool = True
+
     class Config:
         env_file = ".env"
         case_sensitive = False

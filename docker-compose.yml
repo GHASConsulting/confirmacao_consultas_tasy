@@ -70,7 +70,6 @@ services:
       - ORACLE_CHARACTERSET=AL32UTF8
     volumes:
       - oracle_data:/opt/oracle/oradata
-      - ./init-oracle.sql:/opt/oracle/scripts/startup/init-oracle.sql
     ports:
       - "${ORACLE_DOCKER_PORT:-1521}:1521"
     restart: unless-stopped
@@ -92,7 +91,6 @@ services:
       - POSTGRES_PASSWORD=${POSTGRESQL_DOCKER_PASSWORD:-1234}
     volumes:
       - postgresql_data:/var/lib/postgresql/data
-      - ./init-postgresql.sql:/docker-entrypoint-initdb.d/init-postgresql.sql
     ports:
       - "${POSTGRESQL_DOCKER_PORT:-5432}:5432"
     restart: unless-stopped
@@ -113,7 +111,6 @@ services:
       - FIREBIRD_PASSWORD=${FIREBIRD_DOCKER_PASSWORD:-masterkey}
     volumes:
       - firebird_data:/firebird/data
-      - ./init-firebird.sql:/docker-entrypoint-initdb.d/init-firebird.sql
     ports:
       - "${FIREBIRD_DOCKER_PORT:-3050}:3050"
     restart: unless-stopped

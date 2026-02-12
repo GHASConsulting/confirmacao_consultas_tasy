@@ -158,13 +158,13 @@ if %errorLevel% neq 0 (
     exit /b 1
 )
 
-REM Iniciar serviços (padrão PostgreSQL)
-echo [INFO] Iniciando serviços com PostgreSQL...
-make postgresql-setup
+REM Iniciar serviços (padrão Oracle - banco principal da aplicação)
+echo [INFO] Iniciando serviços com Oracle...
+make oracle-setup
 if %errorLevel% neq 0 (
     call :log_error "Erro ao iniciar serviços!"
     echo [INFO] Tente executar manualmente:
-    echo [INFO] make postgresql-setup
+    echo [INFO] make oracle-setup
     echo.
     pause
     exit /b 1
@@ -202,7 +202,7 @@ echo 🎉 INSTALAÇÃO CONCLUÍDA COM SUCESSO! 🎉
 echo ========================================
 echo.
 echo 📱 Aplicação: http://localhost:8000
-echo 🗄️  Banco: PostgreSQL (porta 5432)
+echo 🗄️  Banco: Oracle (porta 1521)
 echo 📊 Status: make status
 echo 📝 Logs: make logs
 echo 🔧 CLI: make cli
@@ -211,7 +211,7 @@ echo 📚 Comandos úteis:
 echo   make help              # Ver todos os comandos
 echo   make restart           # Reiniciar serviços
 echo   make clean             # Limpar tudo
-echo   make oracle-setup      # Mudar para Oracle
+echo   make postgresql-setup  # Mudar para PostgreSQL
 echo   make firebird-setup    # Mudar para Firebird
 echo.
 echo 🌐 Para acessar de outras máquinas:

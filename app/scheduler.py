@@ -89,20 +89,20 @@ class AppointmentScheduler:
             else:
                 logger.info("Job de confirmação desabilitado via configuração")
 
-            # Job 2: Verificar lembretes (configurável via .env)
+            # Job 2: Consultar view a cada N min e processar lembretes 48h (view) e 12h (SQLite)
             if settings.scheduler_enable_reminder_job:
+                interval_min = getattr(
+                    settings, "view_poll_interval_minutes", 5
+                )
                 self.scheduler.add_job(
-                    func=self._job_verificar_lembretes,
-                    trigger=CronTrigger(
-                        hour=settings.scheduler_reminder_hour,
-                        minute=settings.scheduler_reminder_minute,
-                    ),
+                    func=self._job_verificar_lembretes_view_sqlite,
+                    trigger=IntervalTrigger(minutes=interval_min),
                     id="verificar_lembretes",
-                    name=f"Verificar lembretes pendentes (às {settings.scheduler_reminder_hour:02d}:{settings.scheduler_reminder_minute:02d})",
+                    name=f"Consultar view e lembretes 48h/12h (a cada {interval_min} min)",
                     replace_existing=True,
                 )
                 logger.info(
-                    f"Job de lembretes agendado para {settings.scheduler_reminder_hour:02d}:{settings.scheduler_reminder_minute:02d}"
+                    f"Job de lembretes (view+SQLite) agendado a cada {interval_min} minutos"
                 )
             else:
                 logger.info("Job de lembretes desabilitado via configuração")
@@ -208,110 +208,25 @@ class AppointmentScheduler:
         except Exception as e:
             logger.error(f"Erro no job de confirmações: {str(e)}")
 
-    def _job_verificar_lembretes(self):
+    def _job_verificar_lembretes_view_sqlite(self):
         """
-        Job para verificar lembretes pendentes.
+        Job de lembretes: 48h a partir da view, 12h a partir do SQLite.
 
-        Este job roda diariamente às 14h e identifica consultas que
-        precisam de lembretes (48h e 12h antes).
+        - 48h: lê view de confirmação → compara com SQLite → envia → grava no SQLite.
+        - 12h: lê do SQLite (quem já recebeu 48h e está na janela 12h) → envia → grava 12h no SQLite.
         """
         try:
-            logger.info("Executando job: verificar lembretes")
+            logger.info("Executando job: lembretes (view + SQLite)")
+            from app.services.lembretes_view_service import (
+                executar_job_lembretes_48h,
+                executar_job_lembretes_12h,
+            )
 
-            # Importa o serviço do Botconversa
-            from datetime import datetime, timedelta
-
-            from app.database.manager import get_db
-            from app.database.models import Atendimento, StatusConfirmacao
-            from app.services.botconversa_service import BotconversaService
-
-            # Obtém uma sessão do banco
-            db = next(get_db())
-            botconversa_service = BotconversaService(db)
-
-            try:
-                # Calcula as datas para lembretes
-                agora = datetime.now()
-                lembrete_48h = agora + timedelta(hours=48)
-                lembrete_12h = agora + timedelta(hours=12)
-
-                # Busca consultas que precisam de lembretes
-                consultas_para_lembrete = (
-                    db.query(Atendimento)
-                    .filter(
-                        Atendimento.status == StatusConfirmacao.PENDENTE,
-                        Atendimento.subscriber_id.isnot(
-                            None
-                        ),  # Tem subscriber no Botconversa
-                        Atendimento.mensagem_enviada.isnot(
-                            None
-                        ),  # Mensagem inicial já foi enviada
-                        Atendimento.resposta_paciente.is_(
-                            None
-                        ),  # Paciente ainda não respondeu
-                    )
-                    .order_by(Atendimento.data_consulta.asc())
-                    .all()
-                )
-
-                logger.info(
-                    f"Encontradas {len(consultas_para_lembrete)} consultas para lembretes"
-                )
-
-                # Processa cada consulta
-                for consulta in consultas_para_lembrete:
-                    try:
-                        # Verifica se está na janela de lembrete
-                        if (
-                            consulta.data_consulta <= lembrete_48h
-                            and consulta.data_consulta > agora
-                        ):
-                            # Lembrete 48h antes
-                            if self._pode_enviar_lembrete(consulta, "48h"):
-                                logger.info(
-                                    f"Enviando lembrete 48h para {consulta.nome_paciente}"
-                                )
-                                self._enviar_lembrete(
-                                    botconversa_service, consulta, "48h", db
-                                )
-
-                        elif (
-                            consulta.data_consulta <= lembrete_12h
-                            and consulta.data_consulta > agora
-                        ):
-                            # Lembrete 12h antes
-                            if self._pode_enviar_lembrete(consulta, "12h"):
-                                logger.info(
-                                    f"Enviando lembrete 12h para {consulta.nome_paciente}"
-                                )
-                                self._enviar_lembrete(
-                                    botconversa_service, consulta, "12h", db
-                                )
-
-                        elif consulta.data_consulta <= agora:
-                            # Consulta passou sem confirmação
-                            logger.info(
-                                f"Marcando consulta {consulta.id} como SEM_RESPOSTA"
-                            )
-                            consulta.status = StatusConfirmacao.SEM_RESPOSTA
-                            consulta.atualizado_em = agora
-                            db.commit()
-
-                    except Exception as e:
-                        logger.error(
-                            f"Erro ao processar lembrete para consulta {consulta.id}: {str(e)}"
-                        )
-                        continue
-
-                logger.info(
-                    f"Job de lembretes concluído: {len(consultas_para_lembrete)} consultas processadas"
-                )
-
-            finally:
-                db.close()
-
+            executar_job_lembretes_48h()
+            executar_job_lembretes_12h()
+            logger.info("Job de lembretes (view+SQLite) concluído")
         except Exception as e:
-            logger.error(f"Erro no job de lembretes: {str(e)}")
+            logger.error(f"Erro no job de lembretes (view+SQLite): {str(e)}")
 
     def _job_monitorar_novos_atendimentos(self):
         """
@@ -463,7 +378,7 @@ class AppointmentScheduler:
             atendimento.subscriber_id = subscriber_id
             atendimento.mensagem_enviada = "Workflow completo executado automaticamente"
             atendimento.atualizado_em = datetime.now()
-            atendimento.status_confirmacao = StatusConfirmacao.PENDENTE
+            atendimento.status = StatusConfirmacao.PENDENTE
 
             # Commit das alterações
             db.commit()
@@ -480,142 +395,6 @@ class AppointmentScheduler:
                 db.rollback()
             except:
                 pass
-            return False
-
-    def _pode_enviar_lembrete(self, consulta, tipo_lembrete: str) -> bool:
-        """
-        Verifica se pode enviar um lembrete para uma consulta.
-
-        Args:
-            consulta: Objeto Atendimento
-            tipo_lembrete: Tipo do lembrete ("48h" ou "12h")
-
-        Returns:
-            True se pode enviar, False caso contrário
-        """
-        try:
-            from datetime import datetime, timedelta
-
-            # Verifica se o lembrete deste tipo já foi enviado
-            if tipo_lembrete == "48h" and consulta.lembrete_48h_enviado:
-                logger.info(f"Lembrete 48h já foi enviado para consulta {consulta.id}")
-                return False
-
-            if tipo_lembrete == "12h" and consulta.lembrete_12h_enviado:
-                logger.info(f"Lembrete 12h já foi enviado para consulta {consulta.id}")
-                return False
-
-            # Verifica se há um lembrete recente (evita spam)
-            if consulta.ultimo_lembrete_enviado:
-                tempo_desde_ultimo = datetime.now() - consulta.ultimo_lembrete_enviado
-                if tempo_desde_ultimo < timedelta(hours=24):
-                    logger.info(
-                        f"Lembrete enviado há menos de 24h para consulta {consulta.id}"
-                    )
-                    return False
-
-            # Pode enviar o lembrete
-            return True
-
-        except Exception as e:
-            logger.error(f"Erro ao verificar se pode enviar lembrete: {str(e)}")
-            return False
-
-    def _enviar_lembrete(
-        self, botconversa_service, consulta, tipo_lembrete: str, db
-    ) -> bool:
-        """
-        Envia um lembrete para uma consulta.
-
-        Args:
-            botconversa_service: Serviço do Botconversa
-            consulta: Objeto Atendimento
-            tipo_lembrete: Tipo do lembrete ("48h" ou "12h")
-            db: Sessão do banco de dados
-
-        Returns:
-            True se enviado com sucesso, False caso contrário
-        """
-        try:
-            from datetime import datetime
-
-            from app.config.config import settings
-
-            # Formata a data da consulta
-            data_formatada = consulta.data_consulta.strftime("%d/%m/%Y")
-            hora_formatada = consulta.data_consulta.strftime("%H:%M")
-
-            # Obtém as configurações do hospital
-            hospital_name = settings.hospital_name or "Santa Casa de Belo Horizonte"
-            hospital_phone = settings.hospital_phone or "(31) 3238-8100"
-
-            # Cria mensagem de lembrete baseada no tipo
-            if tipo_lembrete == "48h":
-                mensagem = f"""🔔 **LEMBRETE IMPORTANTE**, {consulta.nome_paciente}!
-
-        Sua consulta está marcada para **AMANHÃ**:
-        📅 {data_formatada} às {hora_formatada}
-        👨‍⚕️ Dr. {consulta.nome_medico}
-        🏥 {consulta.especialidade}
-
-        Por favor, confirme sua presença:
-        ✅ SIM - Vou comparecer
-        ❌ NÃO - Preciso cancelar
-
-        📞 Para dúvidas: {hospital_phone}"""
-
-            elif tipo_lembrete == "12h":
-                mensagem = f"""⚠️ **ÚLTIMO LEMBRETE**, {consulta.nome_paciente}!
-
-        Sua consulta é **HOJE** às {hora_formatada}:
-        👨‍⚕️ Dr. {consulta.nome_medico}
-        🏥 {consulta.especialidade}
-
-        Confirme sua presença AGORA:
-        ✅ SIM - Vou comparecer
-        ❌ NÃO - Preciso cancelar
-
-        📞 Para dúvidas: {hospital_phone}"""
-
-            else:
-                logger.error(f"Tipo de lembrete inválido: {tipo_lembrete}")
-                return False
-
-            # Envia a mensagem
-            sucesso = botconversa_service.enviar_mensagem(
-                consulta.subscriber_id, mensagem
-            )
-
-            if sucesso:
-                # Atualiza o atendimento com informação do lembrete e controle de frequência
-                consulta.mensagem_enviada = f"Lembrete {tipo_lembrete}: {mensagem}"
-                consulta.atualizado_em = datetime.now()
-
-                # Marca o lembrete como enviado
-                if tipo_lembrete == "48h":
-                    consulta.lembrete_48h_enviado = True
-                elif tipo_lembrete == "12h":
-                    consulta.lembrete_12h_enviado = True
-
-                # Atualiza informações do último lembrete
-                consulta.ultimo_lembrete_enviado = datetime.now()
-                consulta.tipo_ultimo_lembrete = tipo_lembrete
-
-                # Commit das alterações
-                db.commit()
-
-                logger.info(
-                    f"Lembrete {tipo_lembrete} enviado para {consulta.nome_paciente}"
-                )
-                return True
-            else:
-                logger.error(
-                    f"Erro ao enviar lembrete {tipo_lembrete} para {consulta.nome_paciente}"
-                )
-                return False
-
-        except Exception as e:
-            logger.error(f"Erro ao enviar lembrete {tipo_lembrete}: {str(e)}")
             return False
 
     def get_status(self) -> dict:

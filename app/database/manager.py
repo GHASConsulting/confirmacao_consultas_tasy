@@ -5,7 +5,6 @@ import os
 from loguru import logger
 
 from app.config.config import settings, DataBaseType
-from app.database.adapter import get_database_adapter
 from app.database.base import Base
 
 # Importa os modelos para que sejam registrados no Base.metadata
@@ -177,8 +176,3 @@ def get_db():
 def create_tables():
     """Cria as tabelas no banco de dados"""
     db_manager.create_tables()
-
-
-def get_database_adapter_instance(session_or_client):
-    """Retorna uma instância do adaptador correto para o banco de dados"""
-    return get_database_adapter(settings.database_type, session_or_client)

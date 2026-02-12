@@ -8,6 +8,7 @@ from loguru import logger
 
 from app.config.config import settings
 from app.database.manager import create_tables, initialize_database
+from app.database.sqlite_envios import init_sqlite
 from app.scheduler import iniciar_scheduler, parar_scheduler
 
 # Configuração de logs
@@ -47,9 +48,19 @@ async def startup_event():
         initialize_database()
         logger.info("Banco de dados inicializado")
 
-        # Cria as tabelas se não existirem
-        create_tables()
-        logger.info("Tabelas criadas/verificadas")
+        # Cria as tabelas da app só se configurado (use CREATE_APP_TABLES=false quando usar apenas view)
+        if getattr(settings, "create_app_tables", True):
+            create_tables()
+            logger.info("Tabelas criadas/verificadas")
+        else:
+            logger.info("CREATE_APP_TABLES=false: pulando criação de tabelas (uso apenas view + agenda_consulta)")
+
+        # Inicializa SQLite (controle de envios 48h/12h)
+        try:
+            init_sqlite()
+            logger.info("SQLite de envios inicializado")
+        except Exception as e:
+            logger.warning(f"SQLite de envios não inicializado: {e}")
 
         # Inicia o scheduler
         if iniciar_scheduler():

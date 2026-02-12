@@ -88,3 +88,31 @@ class N8NWebhookData(BaseModel):
     resposta: str  # "1" para SIM, "0" para NÃO
     nome_paciente: Optional[str] = None
     mensagem_original: Optional[str] = None
+    nr_sequencia: Optional[int] = None  # opcional; se não vier, busca no SQLite por telefone
+
+
+# --- View AVA_CONFIRMACAO_CONSULTA (48h) ---
+
+
+class ViewConfirmacaoConsulta(BaseModel):
+    """
+    Uma linha da view TASY.AVA_CONFIRMACAO_CONSULTA (janela 48h).
+    Campos usados para comparação, envio Botconversa e gravação no SQLite.
+    """
+
+    nr_sequencia: int
+    cd_agenda: Optional[int] = None
+    dt_agenda: Optional[datetime] = None
+    dt_consulta: Optional[datetime] = None
+    nm_paciente: Optional[str] = None
+    nr_telefone: Optional[str] = None
+    nr_ddi: Optional[str] = None
+    ds_email: Optional[str] = None
+    nm_medico_externo: Optional[str] = None
+    cd_especialidade: Optional[int] = None
+    ds_observacao: Optional[str] = None
+    ie_status_agenda: Optional[str] = None
+
+    class Config:
+        from_attributes = True
+        populate_by_name = True

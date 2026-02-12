@@ -16,6 +16,7 @@ from loguru import logger
 from sqlalchemy.orm import Session
 
 from app.config.config import settings
+from app.utils.telefone import telefone_para_envio
 from app.database.models import (
     Atendimento,
     Paciente,
@@ -78,7 +79,7 @@ class BotconversaService:
         Cria um subscriber no Botconversa usando o webhook.
 
         Args:
-            telefone: Número do telefone (formato: 5531999629004)
+            telefone: Número do telefone (qualquer formatação; será normalizado para padrão)
             nome: Primeiro nome
             sobrenome: Sobrenome (opcional)
 
@@ -86,6 +87,10 @@ class BotconversaService:
             Dados do subscriber criado ou None se erro
         """
         try:
+            telefone = telefone_para_envio(telefone)
+            if not telefone:
+                logger.error("Telefone inválido ou vazio")
+                return None
             # Prepara dados do subscriber
             subscriber_data = {
                 "phone": telefone,
@@ -122,12 +127,15 @@ class BotconversaService:
         Busca um subscriber pelo telefone.
 
         Args:
-            telefone: Número do telefone
+            telefone: Número do telefone (qualquer formatação; será normalizado)
 
         Returns:
             Dados do subscriber ou None se não encontrado
         """
         try:
+            telefone = telefone_para_envio(telefone)
+            if not telefone:
+                return None
             logger.info(f"Buscando subscriber para telefone: {telefone}")
 
             response = requests.get(
@@ -316,6 +324,108 @@ Aguardamos sua confirmação! 🙏
         except Exception as e:
             logger.error(f"Erro ao enviar mensagem personalizada: {str(e)}")
             return False
+
+    def get_or_create_subscriber_id(self, telefone: str, nome: str) -> Optional[int]:
+        """
+        Retorna subscriber_id pelo telefone, criando subscriber se não existir.
+
+        Args:
+            telefone: Número (qualquer formatação; será normalizado para padrão)
+            nome: Nome do paciente (será split em first_name / last_name)
+
+        Returns:
+            ID do subscriber ou None se falhar
+        """
+        telefone = telefone_para_envio(telefone)
+        if not telefone:
+            return None
+        subscriber = self.buscar_subscriber(telefone)
+        if subscriber and subscriber.get("id") is not None:
+            return subscriber["id"]
+        partes = (nome or "").strip().split(maxsplit=1)
+        primeiro_nome = partes[0] if partes else "Paciente"
+        sobrenome = partes[1] if len(partes) > 1 else ""
+        subscriber = self.criar_subscriber(
+            telefone=telefone, nome=primeiro_nome, sobrenome=sobrenome
+        )
+        if subscriber and subscriber.get("id") is not None:
+            return subscriber["id"]
+        return None
+
+    def enviar_mensagem_por_telefone(
+        self, telefone: str, nome: str, mensagem: str
+    ) -> bool:
+        """
+        Envia mensagem por telefone: obtém ou cria subscriber e envia.
+
+        Usado para lembretes 48h/12h quando os dados vêm da view/SQLite.
+        """
+        subscriber_id = self.get_or_create_subscriber_id(telefone, nome or "Paciente")
+        if not subscriber_id:
+            logger.error(f"Não foi possível obter subscriber para telefone {telefone}")
+            return False
+        return self.enviar_mensagem(subscriber_id, mensagem)
+
+    def atualizar_subscriber_contexto_lembrete(
+        self,
+        subscriber_id: int,
+        nr_sequencia: int,
+        nr_sequencia_agenda: int | None = None,
+    ) -> bool:
+        """
+        Atualiza o subscriber no Botconversa com nr_sequencia e nr_sequencia_agenda.
+
+        Assim o webhook pode devolver ambos e atualizamos a agenda certa (por cd_agenda).
+        O mesmo paciente pode ter várias agendas; nr_sequencia_agenda identifica a linha.
+        """
+        try:
+            url = f"{self.base_url}/subscriber/{subscriber_id}/"
+            body: dict = {"nr_sequencia": nr_sequencia}
+            if nr_sequencia_agenda is not None:
+                body["nr_sequencia_agenda"] = nr_sequencia_agenda
+            response = requests.patch(
+                url, json=body, headers=self.headers, timeout=10
+            )
+            if response.status_code in (200, 201, 204):
+                logger.info(
+                    f"Subscriber {subscriber_id} atualizado com nr_sequencia={nr_sequencia}"
+                    + (f", nr_sequencia_agenda={nr_sequencia_agenda}" if nr_sequencia_agenda is not None else "")
+                )
+                return True
+            logger.warning(
+                f"Botconversa: atualizar subscriber {subscriber_id} retornou "
+                f"{response.status_code} - {response.text}"
+            )
+            return False
+        except Exception as e:
+            logger.warning(
+                f"Erro ao atualizar subscriber com contexto (ignorado): {e}"
+            )
+            return False
+
+    def enviar_mensagem_por_telefone_com_nr_sequencia(
+        self,
+        telefone: str,
+        nome: str,
+        mensagem: str,
+        nr_sequencia: int,
+        nr_sequencia_agenda: int | None = None,
+    ) -> bool:
+        """
+        Envia mensagem e grava nr_sequencia e nr_sequencia_agenda no subscriber.
+
+        nr_sequencia_agenda (cd_agenda) identifica a agenda para não alterar a errada.
+        """
+        subscriber_id = self.get_or_create_subscriber_id(telefone, nome or "Paciente")
+        if not subscriber_id:
+            logger.error(f"Não foi possível obter subscriber para telefone {telefone}")
+            return False
+        ok = self.enviar_mensagem(subscriber_id, mensagem)
+        if ok:
+            self.atualizar_subscriber_contexto_lembrete(
+                subscriber_id, nr_sequencia, nr_sequencia_agenda
+            )
+        return ok
 
     def processar_resposta_paciente(self, telefone: str, resposta: str) -> bool:
         """

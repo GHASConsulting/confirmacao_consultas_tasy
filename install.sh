@@ -168,9 +168,9 @@ start_docker() {
     log_info "Construindo imagens Docker..."
     make build
     
-    # Iniciar serviços (padrão PostgreSQL)
-    log_info "Iniciando serviços com PostgreSQL..."
-    make postgresql-setup
+    # Iniciar serviços (padrão Oracle - banco principal da aplicação)
+    log_info "Iniciando serviços com Oracle..."
+    make oracle-setup
     
     # Aguardar serviços estarem prontos
     log_info "Aguardando serviços estarem prontos..."
@@ -216,7 +216,7 @@ show_next_steps() {
     echo -e "${GREEN}========================================${NC}"
     echo ""
     echo -e "${BLUE}📱 Aplicação:${NC} http://localhost:8000"
-    echo -e "${BLUE}🗄️  Banco:${NC} PostgreSQL (porta 5432)"
+    echo -e "${BLUE}🗄️  Banco:${NC} Oracle (porta 1521)"
     echo -e "${BLUE}📊 Status:${NC} make status"
     echo -e "${BLUE}📝 Logs:${NC} make logs"
     echo -e "${BLUE}🔧 CLI:${NC} make cli"
@@ -225,7 +225,7 @@ show_next_steps() {
     echo "  make help              # Ver todos os comandos"
     echo "  make restart           # Reiniciar serviços"
     echo "  make clean             # Limpar tudo"
-    echo "  make oracle-setup      # Mudar para Oracle"
+    echo "  make postgresql-setup  # Mudar para PostgreSQL"
     echo "  make firebird-setup    # Mudar para Firebird"
     echo ""
     echo -e "${BLUE}🌐 Para acessar de outras máquinas:${NC}"
