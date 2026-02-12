@@ -1,7 +1,7 @@
 from datetime import datetime
 from typing import Optional
 
-from pydantic import BaseModel, EmailStr
+from pydantic import BaseModel
 
 from app.database.models import StatusConfirmacao
 
@@ -9,7 +9,7 @@ from app.database.models import StatusConfirmacao
 class PacienteBase(BaseModel):
     nome: str
     telefone: str
-    email: Optional[EmailStr] = None
+    email: Optional[str] = None
 
 
 class Paciente(PacienteBase):

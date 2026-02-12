@@ -92,14 +92,27 @@ async def shutdown_event():
 async def log_requests(request: Request, call_next):
     """Middleware para logging de requisições"""
     start_time = datetime.now()
-    response = await call_next(request)
-    process_time = (datetime.now() - start_time).total_seconds()
-
-    logger.info(
-        f"{request.method} {request.url.path} - {response.status_code} - {process_time:.3f}s"
-    )
-
-    return response
+    
+    try:
+        response = await call_next(request)
+        process_time = (datetime.now() - start_time).total_seconds()
+        
+        logger.info(
+            f"{request.method} {request.url.path} - {response.status_code} - {process_time:.3f}s"
+        )
+        
+        return response
+        
+    except Exception as e:
+        process_time = (datetime.now() - start_time).total_seconds()
+        logger.error(f"Erro no middleware para {request.method} {request.url.path}: {str(e)}")
+        logger.error(f"Tempo de processamento: {process_time:.3f}s")
+        
+        # Retorna erro 500 sem quebrar a aplicação
+        return JSONResponse(
+            status_code=500,
+            content={"detail": "Erro interno do servidor"},
+        )
 
 
 # Tratamento de exceções

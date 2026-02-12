@@ -13,6 +13,7 @@ from typing import Any, Dict, Optional
 
 from loguru import logger
 from sqlalchemy.orm import Session
+from sqlalchemy import text
 
 from app.database.models import (
     Atendimento,
@@ -259,8 +260,13 @@ class WebhookService:
             subscriber_id = n8n_data.get("subscriber_id")
             resposta = n8n_data.get("resposta")
             nome_paciente = n8n_data.get("nome_paciente")
+<<<<<<< HEAD
             nr_sequencia = n8n_data.get("nr_sequencia")  # opcional
             nr_sequencia_agenda = n8n_data.get("nr_sequencia_agenda")  # opcional; cd_agenda para UPDATE
+=======
+            id_tabela = n8n_data.get("id_tabela")
+            nr_seq_agenda = n8n_data.get("nr_seq_agenda")
+>>>>>>> d68998a574fb5f1a3f9edc3be084d95b00ad7be4
 
             if not telefone or not subscriber_id or not resposta:
                 return {
@@ -278,6 +284,7 @@ class WebhookService:
             mensagem_status = "CONFIRMADO" if confirmado else "CANCELADO"
 
             logger.info(
+<<<<<<< HEAD
                 f"Processando resposta N8N: telefone={telefone}, nr_sequencia={nr_sequencia}, "
                 f"nr_sequencia_agenda={nr_sequencia_agenda}, resposta={resposta}"
             )
@@ -333,9 +340,32 @@ class WebhookService:
                 }
 
             # Fallback: fluxo antigo por subscriber_id (tabela Atendimento)
+=======
+                f"Processando resposta N8N: {telefone} - {subscriber_id} - {resposta} - id_tabela: {id_tabela} - nr_seq_agenda: {nr_seq_agenda}"
+            )
+
+            # Busca atendimento por subscriber_id + id_tabela + nr_seq_agenda (busca mais precisa)
+            logger.info(f"🔍 Buscando atendimento para subscriber_id: {subscriber_id}, id_tabela: {id_tabela}, nr_seq_agenda: {nr_seq_agenda}")
+            
+            # Filtros para busca mais precisa
+            filtros = [Atendimento.subscriber_id == subscriber_id]
+            
+            if id_tabela:
+                filtros.append(Atendimento.id == int(id_tabela))
+                logger.info(f"🔍 Adicionando filtro por id_tabela: {id_tabela}")
+            
+            if nr_seq_agenda:
+                filtros.append(Atendimento.nr_seq_agenda == int(nr_seq_agenda))
+                logger.info(f"🔍 Adicionando filtro por nr_seq_agenda: {nr_seq_agenda}")
+            
+>>>>>>> d68998a574fb5f1a3f9edc3be084d95b00ad7be4
             atendimento = (
                 self.db.query(Atendimento)
-                .filter(Atendimento.subscriber_id == subscriber_id)
+                .filter(
+                    Atendimento.subscriber_id == subscriber_id,
+                    Atendimento.id == int(id_tabela) if id_tabela else True,
+                    Atendimento.nr_seq_agenda == int(nr_seq_agenda) if nr_seq_agenda else True
+                )
                 .first()
             )
             if not atendimento:
@@ -344,6 +374,7 @@ class WebhookService:
                     "error": "Nenhum nr_sequencia (payload ou SQLite) e atendimento não encontrado para subscriber_id",
                 }
 
+<<<<<<< HEAD
             if confirmado:
                 atendimento.status = StatusConfirmacao.CONFIRMADO
             else:
@@ -351,7 +382,82 @@ class WebhookService:
             atendimento.respondido_em = datetime.now()
             atendimento.resposta_paciente = resposta
             atendimento.atualizado_em = datetime.now()
+=======
+            logger.info(f"✅ Atendimento encontrado: ID {atendimento.id} - {atendimento.nome_paciente} - {atendimento.data_consulta}")
+
+            # Processa a resposta
+            logger.info(f"Processando resposta: {resposta}")
+            logger.info(f"Status atual do atendimento: {atendimento.status_confirmacao}")
+            
+            if resposta == "1":
+                # Confirmação
+                logger.info("Definindo status como CONFIRMADO")
+                atendimento.status_confirmacao = StatusConfirmacao.CONFIRMADO
+                mensagem_status = "CONFIRMADO"
+                logger.info(f"Status definido: {atendimento.status_confirmacao}")
+            elif resposta == "0":
+                # Cancelamento
+                logger.info("Definindo status como CANCELADO")
+                atendimento.status_confirmacao = StatusConfirmacao.CANCELADO
+                mensagem_status = "CANCELADO"
+                logger.info(f"Status definido: {atendimento.status_confirmacao}")
+            else:
+                logger.warning(f"Resposta inválida: {resposta}")
+                return {
+                    "success": False,
+                    "error": f"Resposta inválida: {resposta}. Esperado '1' ou '0'",
+                }
+
+            # Atualiza campos de controle
+            logger.info("Atualizando campos de controle...")
+            atendimento.respondido_em = datetime.now()
+            atendimento.resposta_paciente = resposta
+            atendimento.atualizado_em = datetime.now()
+            logger.info(f"Campos atualizados. Status final: {atendimento.status_confirmacao}")
+
+            # Salva no banco
+            logger.info("Fazendo commit no banco...")
+            logger.info(f"Status antes do commit: {atendimento.status_confirmacao}")
+            logger.info(f"Status antes do commit (value): {atendimento.status_confirmacao.value if atendimento.status_confirmacao else 'None'}")
+            
+            # Força o flush para garantir que as mudanças sejam enviadas para o banco
+            self.db.flush()
+            logger.info("Flush realizado")
+            
+            # Faz o commit
+>>>>>>> d68998a574fb5f1a3f9edc3be084d95b00ad7be4
             self.db.commit()
+            logger.info("Commit realizado com sucesso!")
+            
+            #Chamar procedure Oracle para sincronizar com sistema legado
+            try:
+                logger.info(f"Chamando procedure Oracle para atendimento {atendimento.id}")
+                logger.info(f"📅 Data/hora da consulta: {atendimento.data_consulta}")
+                logger.info(f"👤 Nome do paciente: {atendimento.nome_paciente}")
+                
+                # Determina o status para a procedure
+                status_procedure = "CONFIRMADO" if resposta == "1" else "CANCELADO"
+                
+                # Chama a procedure
+                self.db.execute(
+                    text("CALL ghas_prc_alt_status_age(:id_agenda_p, :status_p)"),
+                    {
+                        "id_agenda_p": atendimento.id,
+                        "status_p": status_procedure
+                    }
+                )
+                
+                logger.info(f"Procedure Oracle executada com sucesso para atendimento {atendimento.id}")
+                
+            except Exception as proc_error:
+                logger.error(f"Erro ao executar procedure Oracle: {str(proc_error)}")
+                logger.warning("Atendimento foi salvo, mas procedure falhou - verificar manualmente")
+                # Não faz rollback - atendimento já foi salvo com sucesso
+            
+            # Verifica se foi salvo
+            self.db.refresh(atendimento)
+            logger.info(f"Status após refresh: {atendimento.status_confirmacao}")
+            logger.info(f"Status após refresh (value): {atendimento.status_confirmacao.value if atendimento.status_confirmacao else 'None'}")
 
             return {
                 "success": True,
@@ -361,9 +467,24 @@ class WebhookService:
                 "telefone": telefone,
                 "subscriber_id": subscriber_id,
                 "resposta": resposta,
+                "id_tabela": id_tabela,
+                "nr_seq_agenda": nr_seq_agenda,
             }
 
         except Exception as e:
             logger.error(f"Erro ao processar webhook N8N: {str(e)}")
+<<<<<<< HEAD
             self.db.rollback()
+=======
+            logger.error(f"Tipo do erro: {type(e).__name__}")
+            logger.error("Traceback completo:", exc_info=True)
+            
+            # Rollback em caso de erro
+            try:
+                self.db.rollback()
+                logger.info("Rollback realizado no WebhookService devido a erro")
+            except Exception as rollback_error:
+                logger.error(f"Erro no rollback do WebhookService: {str(rollback_error)}")
+            
+>>>>>>> d68998a574fb5f1a3f9edc3be084d95b00ad7be4
             return {"success": False, "error": str(e)}

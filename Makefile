@@ -1,7 +1,7 @@
 .PHONY: help build up down logs status clean test cli
 
 # Variáveis
-DOCKER_COMPOSE = docker-compose
+DOCKER_COMPOSE = docker compose
 APP_NAME = confirmacao-consultas
 
 # Comandos padrão
@@ -28,15 +28,15 @@ status: ## Mostra status dos serviços
 # Desenvolvimento com bancos específicos
 dev-oracle: ## Setup completo com Oracle
 	$(DOCKER_COMPOSE) --profile oracle up -d
-	@echo "✅ Serviços Oracle iniciados! Acesse http://localhost:8000"
+	@echo "✅ Serviços Oracle iniciados! Acesse http://localhost:5001"
 
 dev-postgresql: ## Setup completo com PostgreSQL
 	$(DOCKER_COMPOSE) --profile postgresql up -d
-	@echo "✅ Serviços PostgreSQL iniciados! Acesse http://localhost:8000"
+	@echo "✅ Serviços PostgreSQL iniciados! Acesse http://localhost:5001"
 
 dev-firebird: ## Setup completo com Firebird
 	$(DOCKER_COMPOSE) --profile firebird up -d
-	@echo "✅ Serviços Firebird iniciados! Acesse http://localhost:8000"
+	@echo "✅ Serviços Firebird iniciados! Acesse http://localhost:5001"
 
 dev: dev-oracle ## Setup padrão com Oracle
 
@@ -73,10 +73,10 @@ cli: ## Executa CLI da aplicação
 
 # Monitoramento
 health: ## Verifica saúde da aplicação
-	curl -f http://localhost:8000/health || echo "❌ Aplicação não está respondendo"
+	curl -f http://localhost:5001/health || echo "❌ Aplicação não está respondendo"
 
 scheduler-status: ## Verifica status do scheduler
-	curl -f http://localhost:8000/scheduler/status || echo "❌ Scheduler não está respondendo"
+	curl -f http://localhost:5001/scheduler/status || echo "❌ Scheduler não está respondendo"
 
 # Limpeza
 clean: ## Limpa containers, volumes e imagens
@@ -103,8 +103,13 @@ shell: ## Acessa shell do container da aplicação
 # Comandos de desenvolvimento
 dev-setup: dev ## Setup completo para desenvolvimento
 	@echo "✅ Setup de desenvolvimento concluído!"
+<<<<<<< HEAD
 	@echo "📱 Aplicação: http://localhost:8000"
 	@echo "🗄️  Banco: $(DOCKER_DATABASE_TYPE:-oracle)"
+=======
+	@echo "📱 Aplicação: http://localhost:5001"
+	@echo "🗄️  Banco: $(DOCKER_DATABASE_TYPE:-postgresql)"
+>>>>>>> d68998a574fb5f1a3f9edc3be084d95b00ad7be4
 	@echo "📊 Status: make status"
 	@echo "📝 Logs: make logs"
 

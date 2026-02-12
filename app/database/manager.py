@@ -45,6 +45,11 @@ class DatabaseManager:
     def _initialize_oracle(self):
         """Inicializa conexão com Oracle"""
         try:
+            import os
+            os.environ['ORACLE_HOME'] = '/opt/oracle/instantclient_21_13'
+            os.environ['LD_LIBRARY_PATH'] = '/opt/oracle/instantclient_21_13'
+            os.environ['PATH'] = '/opt/oracle/instantclient_21_13:' + os.environ.get('PATH', '')
+            
             database_url = settings.get_database_url
             if not database_url:
                 raise ValueError("Oracle URL não configurada")
